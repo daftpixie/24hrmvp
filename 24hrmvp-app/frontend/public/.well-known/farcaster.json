@@ -1,0 +1,19 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEyMzQ1LCJ0eXBlIjoiY3VzdG9keSIsImtleSI6IjB4Li4uIn0=",
+    "payload": "eyJkb21haW4iOiIyNGhybXZwLmFwcCJ9",
+    "signature": "0x..."
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "24HRMVP",
+    "iconUrl": "https://24hrmvp.app/icon.png",
+    "homeUrl": "https://24hrmvp.app",
+    "imageUrl": "https://24hrmvp.app/og-image.png",
+    "buttonTitle": "🚀 Submit Idea",
+    "description": "Community-driven 24-hour MVP development platform",
+    "splashImageUrl": "https://24hrmvp.app/splash.png",
+    "splashBackgroundColor": "#04D9FF",
+    "webhookUrl": "https://api.24hrmvp.app/webhook"
+  }
+}

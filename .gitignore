@@ -1,0 +1,6 @@
+
+# Visual Studio
+.vs/
+
+# Build scripts (local only)
+24hrmvp-app/scripts/

@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@400;600;700&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Chrome Gradients */
+    --chrome-gradient: linear-gradient(135deg, #A8A9AD 0%, #B4B5B8 20%, #C0C0C3 40%, #CBCCCD 60%, #D7D7D8 80%, #E3E3E3 100%);
+    --chrome-reflective: linear-gradient(180deg, #4B505A 0%, #B0C4DE 25%, #D1E1F6 50%, #CCCCCC 75%, #D8D8D8 100%);
+    
+    /* Neon Colors */
+    --neon-cyan: #04D9FF;
+    --neon-blue: #1F51FF;
+    --electric-cyan: #00FEFC;
+    --tron-blue: #7DFDFE;
+    --neon-purple: #8A00C4;
+    --neon-pink: #FB48C4;
+    --neon-orange: #FF5C00;
+    
+    /* Dark Backgrounds */
+    --bg-deepest: #0B192A;
+    --bg-primary: #1E1E1E;
+    --surface-1: #2E2E2E;
+    
+    /* Text */
+    --text-primary: #FAFAFA;
+    --text-secondary: #B0B0B0;
+    --text-tertiary: #808080;
+  }
+
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+  }
+
+  body {
+    font-family: theme('fontFamily.body');
+    background: var(--bg-deepest);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Laser Grid Background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(rgba(4, 217, 255, 0.1) 2px, transparent 2px),
+      linear-gradient(90deg, rgba(4, 217, 255, 0.1) 2px, transparent 2px);
+    background-size: 50px 50px;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+}
+
+@layer utilities {
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    background: var(--bg-primary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--neon-cyan), var(--neon-purple));
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(4, 217, 255, 0.5);
+  }
+
+  /* Focus States */
+  *:focus-visible {
+    outline: 2px solid var(--neon-cyan);
+    outline-offset: 3px;
+    border-radius: 4px;
+    box-shadow: 0 0 0 4px rgba(4, 217, 255, 0.2);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

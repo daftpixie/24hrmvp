@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEyMzQ1LCJ0eXBlIjoiY3VzdG9keSIsImtleSI6IjB4Li4uIn0=",
+    "payload": "eyJ0eXBlIjoid2ViYXBwIn0=",
+    "signature": "MEUCIQDfY..."
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "24HRMVP",
+    "iconUrl": "https://24hrmvp.xyz/icon.png",
+    "homeUrl": "https://24hrmvp.xyz",
+    "buttonTitle": "🚀 Submit Idea",
+    "description": "H.O.P.E. - Help Other People Excel. Community-driven 24-hour MVP development.",
+    "splashImageUrl": "https://24hrmvp.xyz/splash.png",
+    "splashBackgroundColor": "#0B192A",
+    "webhookUrl": "https://api.24hrmvp.xyz/webhook"
+  }
+}

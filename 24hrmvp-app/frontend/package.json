@@ -1,0 +1,40 @@
+{
+  "name": "24hrmvp-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "14.2.33",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@farcaster/miniapp-sdk": "0.1.10",
+    "@farcaster/quick-auth": "0.0.8",
+    "framer-motion": "11.0.0",
+    "socket.io-client": "4.8.1",
+    "zod": "3.23.8",
+    "clsx": "2.1.0",
+    "tailwind-merge": "2.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.0",
+    "@types/react": "18.3.1",
+    "@types/react-dom": "18.3.0",
+    "eslint": "8.57.0",
+    "eslint-config-next": "14.2.33",
+    "typescript": "5.3.3",
+    "tailwindcss": "3.4.0",
+    "autoprefixer": "10.4.16",
+    "postcss": "8.4.32"
+  },
+  "overrides": {
+    "eslint": "8.57.0"
+  }
+}

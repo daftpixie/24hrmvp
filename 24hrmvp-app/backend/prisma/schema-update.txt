@@ -1,0 +1,2 @@
+Add this line to the User model:
+  payments    Payment[]

@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24HRMVP - Manifest Assets Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@400;600;700&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Chrome Gradients */
+            --chrome-gradient: linear-gradient(135deg, #A8A9AD 0%, #B4B5B8 20%, #C0C0C3 40%, #CBCCCD 60%, #D7D7D8 80%, #E3E3E3 100%);
+            --chrome-reflective: linear-gradient(180deg, #4B505A 0%, #B0C4DE 25%, #D1E1F6 50%, #CCCCCC 75%, #D8D8D8 100%);
+            
+            /* Neon Colors */
+            --neon-cyan: #04D9FF;
+            --neon-blue: #1F51FF;
+            --electric-cyan: #00FEFC;
+            --tron-blue: #7DFDFE;
+            --neon-purple: #8A00C4;
+            --neon-pink: #FB48C4;
+            --neon-orange: #FF5C00;
+            
+            /* Dark Backgrounds */
+            --bg-deepest: #0B192A;
+            --bg-primary: #1E1E1E;
+            --surface-1: #2E2E2E;
+            
+            /* Text */
+            --text-primary: #FAFAFA;
+            --text-secondary: #B0B0B0;
+            
+            /* Typography */
+            --font-display: 'Orbitron', sans-serif;
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+            --font-mono: 'Space Mono', monospace;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-deepest);
+            color: var(--text-primary);
+            padding: 3rem 2rem;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Laser Grid Background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-image:
+                linear-gradient(rgba(4, 217, 255, 0.1) 2px, transparent 2px),
+                linear-gradient(90deg, rgba(4, 217, 255, 0.1) 2px, transparent 2px);
+            background-size: 50px 50px;
+            opacity: 0.3;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: 3.5rem;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 1rem;
+            background: var(--chrome-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 20px rgba(4, 217, 255, 0.5));
+        }
+
+        .subtitle {
+            font-family: var(--font-heading);
+            font-size: 1.25rem;
+            text-align: center;
+            color: var(--neon-cyan);
+            margin-bottom: 3rem;
+            text-shadow: 0 0 10px rgba(4, 217, 255, 0.5);
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(4, 217, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 0 20px rgba(4, 217, 255, 0.1);
+        }
+
+        .instructions h2 {
+            font-family: var(--font-heading);
+            color: var(--neon-cyan);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .instructions ol {
+            margin-left: 1.5rem;
+            line-height: 1.8;
+        }
+
+        .instructions code {
+            font-family: var(--font-mono);
+            background: rgba(4, 217, 255, 0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            color: var(--electric-cyan);
+        }
+
+        .assets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .asset-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 
+                0 4px 8px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .asset-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 
+                0 8px 16px rgba(0, 0, 0, 0.3),
+                0 0 30px rgba(4, 217, 255, 0.2);
+        }
+
+        .asset-card h3 {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            color: var(--neon-cyan);
+            margin-bottom: 0.5rem;
+        }
+
+        .asset-card .dimensions {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            box-shadow: 
+                0 0 20px rgba(4, 217, 255, 0.2),
+                inset 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+        }
+
+        .download-btn {
+            width: 100%;
+            padding: 14px 28px;
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 600;
+            border: 2px solid var(--neon-cyan);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--neon-cyan);
+            cursor: pointer;
+            box-shadow:
+                0 0 10px rgba(4, 217, 255, 0.3),
+                0 0 20px rgba(4, 217, 255, 0.2),
+                inset 0 0 10px rgba(4, 217, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: rgba(4, 217, 255, 0.1);
+            box-shadow:
+                0 0 15px rgba(4, 217, 255, 0.5),
+                0 0 30px rgba(4, 217, 255, 0.3),
+                inset 0 0 15px rgba(4, 217, 255, 0.2);
+            transform: scale(1.02);
+        }
+
+        .download-btn:active {
+            transform: scale(0.98);
+        }
+
+        .generate-all {
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .generate-all button {
+            padding: 18px 48px;
+            font-size: 1.25rem;
+            position: relative;
+            overflow: hidden;
+            background: var(--chrome-gradient);
+            color: #333;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+                0 2px 5px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .generate-all button:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.8),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+                0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .assets-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>24HRMVP</h1>
+        <p class="subtitle">Farcaster Manifest Assets Generator</p>
+
+        <div class="instructions">
+            <h2>📋 Instructions</h2>
+            <ol>
+                <li>Click <strong>"Generate All Assets"</strong> button below to create all images</li>
+                <li>Review each asset in the preview</li>
+                <li>Click individual <strong>"Download"</strong> buttons to save each PNG</li>
+                <li>Place downloaded files in: <code>frontend/public/manifest-assets/</code></li>
+                <li>Upload to your domain and update <code>farcaster.json</code> URLs</li>
+            </ol>
+        </div>
+
+        <div class="generate-all">
+            <button onclick="generateAllAssets()">
+                ⚡ Generate All Assets
+            </button>
+        </div>
+
+        <div class="assets-grid" id="assetsGrid">
+            <!-- Assets will be generated here -->
+        </div>
+    </div>
+
+    <script>
+        const assets = [
+            { id: 'icon', name: 'App Icon', width: 512, height: 512, filename: 'icon.png' },
+            { id: 'splash', name: 'Splash Screen', width: 1200, height: 630, filename: 'splash.png' },
+            { id: 'og-image', name: 'Social Share Image', width: 1200, height: 630, filename: 'og-image.png' },
+            { id: 'screenshot-1', name: 'Screenshot 1 - Voting', width: 1080, height: 1920, filename: 'screenshot-1.png' },
+            { id: 'screenshot-2', name: 'Screenshot 2 - Submit Idea', width: 1080, height: 1920, filename: 'screenshot-2.png' },
+            { id: 'screenshot-3', name: 'Screenshot 3 - Leaderboard', width: 1080, height: 1920, filename: 'screenshot-3.png' },
+        ];
+
+        function generateAllAssets() {
+            const grid = document.getElementById('assetsGrid');
+            grid.innerHTML = '';
+
+            assets.forEach(asset => {
+                const card = createAssetCard(asset);
+                grid.appendChild(card);
+                drawAsset(asset);
+            });
+        }
+
+        function createAssetCard(asset) {
+            const card = document.createElement('div');
+            card.className = 'asset-card';
+            card.innerHTML = `
+                <h3>${asset.name}</h3>
+                <p class="dimensions">${asset.width} × ${asset.height}px</p>
+                <div class="canvas-wrapper">
+                    <canvas id="${asset.id}" width="${asset.width}" height="${asset.height}"></canvas>
+                </div>
+                <button class="download-btn" onclick="downloadAsset('${asset.id}', '${asset.filename}')">
+                    ⬇ Download ${asset.filename}
+                </button>
+            `;
+            return card;
+        }
+
+        function drawAsset(asset) {
+            const canvas = document.getElementById(asset.id);
+            const ctx = canvas.getContext('2d');
+
+            switch(asset.id) {
+                case 'icon':
+                    drawIcon(ctx, asset.width, asset.height);
+                    break;
+                case 'splash':
+                    drawSplash(ctx, asset.width, asset.height);
+                    break;
+                case 'og-image':
+                    drawOGImage(ctx, asset.width, asset.height);
+                    break;
+                case 'screenshot-1':
+                    drawScreenshot1(ctx, asset.width, asset.height);
+                    break;
+                case 'screenshot-2':
+                    drawScreenshot2(ctx, asset.width, asset.height);
+                    break;
+                case 'screenshot-3':
+                    drawScreenshot3(ctx, asset.width, asset.height);
+                    break;
+            }
+        }
+
+        // ============================================
+        // ICON - 512x512 - Liquid Chrome Logo
+        // ============================================
+        function drawIcon(ctx, w, h) {
+            // Dark navy background
+            ctx.fillStyle = '#0B192A';
+            ctx.fillRect(0, 0, w, h);
+
+            // Chrome gradient circle
+            const gradient = ctx.createLinearGradient(0, 0, w, h);
+            gradient.addColorStop(0, '#A8A9AD');
+            gradient.addColorStop(0.25, '#D1E1F6');
+            gradient.addColorStop(0.5, '#E3E3E3');
+            gradient.addColorStop(0.75, '#C0C0C3');
+            gradient.addColorStop(1, '#D8D8D8');
+
+            ctx.beginPath();
+            ctx.arc(w/2, h/2, w*0.35, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Neon cyan glow
+            ctx.shadowColor = '#04D9FF';
+            ctx.shadowBlur = 40;
+            ctx.strokeStyle = '#04D9FF';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // "24" text
+            ctx.shadowBlur = 20;
+            ctx.font = 'bold 120px Orbitron';
+            ctx.fillStyle = '#0B192A';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('24', w/2, h/2 - 20);
+
+            // "HR" text
+            ctx.font = 'bold 60px Orbitron';
+            ctx.fillText('HR', w/2, h/2 + 60);
+        }
+
+        // ============================================
+        // SPLASH - 1200x630 - Splash Screen
+        // ============================================
+        function drawSplash(ctx, w, h) {
+            // Deep navy background
+            ctx.fillStyle = '#0B192A';
+            ctx.fillRect(0, 0, w, h);
+
+            // Laser grid
+            ctx.strokeStyle = 'rgba(4, 217, 255, 0.15)';
+            ctx.lineWidth = 2;
+            for (let x = 0; x < w; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+                ctx.stroke();
+            }
+            for (let y = 0; y < h; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            // Chrome title
+            const titleGradient = ctx.createLinearGradient(0, h/2 - 100, w, h/2 - 100);
+            titleGradient.addColorStop(0, '#999');
+            titleGradient.addColorStop(0.2, '#fff');
+            titleGradient.addColorStop(0.5, '#E3E3E3');
+            titleGradient.addColorStop(0.8, '#fff');
+            titleGradient.addColorStop(1, '#999');
+
+            ctx.font = 'bold 140px Orbitron';
+            ctx.fillStyle = titleGradient;
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#04D9FF';
+            ctx.shadowBlur = 30;
+            ctx.fillText('24HRMVP', w/2, h/2 - 50);
+
+            // Subtitle
+            ctx.font = '500 40px Space Grotesk';
+            ctx.fillStyle = '#04D9FF';
+            ctx.shadowBlur = 20;
+            ctx.fillText('AI-Powered 24-Hour MVP Development', w/2, h/2 + 80);
+
+            // Tagline
+            ctx.font = '400 28px DM Sans';
+            ctx.fillStyle = '#7DFDFE';
+            ctx.shadowBlur = 10;
+            ctx.fillText('From Idea to MVP in 24 Hours', w/2, h/2 + 140);
+        }
+
+        // ============================================
+        // OG IMAGE - 1200x630 - Social Share
+        // ============================================
+        function drawOGImage(ctx, w, h) {
+            // Background
+            const bgGradient = ctx.createLinearGradient(0, 0, w, h);
+            bgGradient.addColorStop(0, '#0B192A');
+            bgGradient.addColorStop(1, '#1E1E1E');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, w, h);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(4, 217, 255, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < w; i += 60) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, h);
+                ctx.stroke();
+            }
+
+            // Main title
+            ctx.font = 'bold 100px Orbitron';
+            const gradient = ctx.createLinearGradient(w/2 - 300, 0, w/2 + 300, 0);
+            gradient.addColorStop(0, '#C0C0C3');
+            gradient.addColorStop(0.5, '#E3E3E3');
+            gradient.addColorStop(1, '#C0C0C3');
+            ctx.fillStyle = gradient;
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#04D9FF';
+            ctx.shadowBlur = 25;
+            ctx.fillText('24HRMVP', w/2, h/2 - 80);
+
+            // Description
+            ctx.font = '600 32px Space Grotesk';
+            ctx.fillStyle = '#04D9FF';
+            ctx.shadowBlur = 15;
+            ctx.fillText('Vote on Ideas • AI Builds MVPs', w/2, h/2 + 20);
+
+            // Subtitle
+            ctx.font = '400 24px DM Sans';
+            ctx.fillStyle = '#00FEFC';
+            ctx.shadowBlur = 10;
+            ctx.fillText('Community-Driven Development Platform', w/2, h/2 + 80);
+
+            // Bottom accent
+            ctx.fillStyle = 'rgba(4, 217, 255, 0.2)';
+            ctx.fillRect(0, h - 8, w, 8);
+        }
+
+        // ============================================
+        // SCREENSHOT 1 - 1080x1920 - Voting Dashboard
+        // ============================================
+        function drawScreenshot1(ctx, w, h) {
+            // Background
+            ctx.fillStyle = '#0B192A';
+            ctx.fillRect(0, 0, w, h);
+
+            // Grid background
+            ctx.strokeStyle = 'rgba(4, 217, 255, 0.08)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < w; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+                ctx.stroke();
+            }
+
+            // Header
+            ctx.fillStyle = 'rgba(30, 30, 30, 0.8)';
+            ctx.fillRect(0, 0, w, 120);
+            
+            ctx.font = 'bold 48px Orbitron';
+            ctx.fillStyle = '#E3E3E3';
+            ctx.textAlign = 'center';
+            ctx.fillText('24HRMVP', w/2, 75);
+
+            // Title section
+            ctx.font = '600 42px Space Grotesk';
+            ctx.fillStyle = '#04D9FF';
+            ctx.shadowColor = '#04D9FF';
+            ctx.shadowBlur = 15;
+            ctx.fillText('Active Voting Cycle', w/2, 220);
+
+            ctx.font = '400 28px DM Sans';
+            ctx.fillStyle = '#B0B0B0';
+            ctx.shadowBlur = 0;
+            ctx.fillText('5 days remaining', w/2, 280);
+
+            // Idea cards
+            const cardY = [380, 680, 980, 1280, 1580];
+            cardY.forEach((y, i) => {
+                // Card background
+                const cardGradient = ctx.createLinearGradient(80, y, 80, y + 250);
+                cardGradient.addColorStop(0, 'rgba(190, 190, 190, 0.12)');
+                cardGradient.addColorStop(1, 'rgba(230, 230, 230, 0.18)');
+                ctx.fillStyle = cardGradient;
+                roundRect(ctx, 60, y, w - 120, 250, 20);
+                ctx.fill();
+
+                // Border
+                ctx.strokeStyle = 'rgba(4, 217, 255, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Idea title
+                ctx.font = '600 32px Space Grotesk';
+                ctx.fillStyle = '#FAFAFA';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Idea ${i + 1}: AI-Powered Tool`, 100, y + 60);
+
+                // Category tag
+                ctx.fillStyle = 'rgba(4, 217, 255, 0.2)';
+                roundRect(ctx, 100, y + 90, 180, 40, 8);
+                ctx.fill();
+                
+                ctx.font = '500 20px DM Sans';
+                ctx.fillStyle = '#04D9FF';
+                ctx.textAlign = 'left';
+                ctx.fillText('Developer Tools', 110, y + 115);
+
+                // Vote count
+                ctx.font = 'bold 56px Space Mono';
+                ctx.fillStyle = '#04D9FF';
+                ctx.textAlign = 'right';
+                ctx.shadowColor = '#04D9FF';
+                ctx.shadowBlur = 20;
+                ctx.fillText(`${42 - i * 5}`, w - 100, y + 80);
+                
+                ctx.font = '400 20px DM Sans';
+                ctx.fillStyle = '#7DFDFE';
+                ctx.shadowBlur = 0;
+                ctx.fillText('votes', w - 100, y + 110);
+
+                // Vote button
+                ctx.strokeStyle = '#04D9FF';
+                ctx.lineWidth = 2;
+                roundRect(ctx, 100, y + 170, 200, 50, 10);
+                ctx.stroke();
+                
+                ctx.font = '600 24px Space Grotesk';
+                ctx.fillStyle = '#04D9FF';
+                ctx.textAlign = 'left';
+                ctx.fillText('🗳️ Vote', 150, y + 203);
+            });
+        }
+
+        // ============================================
+        // SCREENSHOT 2 - 1080x1920 - Idea Submission
+        // ============================================
+        function drawScreenshot2(ctx, w, h) {
+            // Background
+            ctx.fillStyle = '#0B192A';
+            ctx.fillRect(0, 0, w, h);
+
+            // Header
+            ctx.fillStyle = 'rgba(30, 30, 30, 0.8)';
+            ctx.fillRect(0, 0, w, 120);
+            
+            ctx.font = 'bold 48px Orbitron';
+            ctx.fillStyle = '#E3E3E3';
+            ctx.textAlign = 'center';
+            ctx.fillText('24HRMVP', w/2, 75);
+
+            // Title
+            ctx.font = '600 46px Space Grotesk';
+            ctx.fillStyle = '#04D9FF';
+            ctx.shadowColor = '#04D9FF';
+            ctx.shadowBlur = 15;
+            ctx.fillText('Submit Your Idea', w/2, 220);
+
+            ctx.font = '400 26px DM Sans';
+            ctx.fillStyle = '#B0B0B0';
+            ctx.shadowBlur = 0;
+            ctx.fillText('Turn your vision into reality', w/2, 280);
+
+            // Form fields
+            const fields = [
+                { label: 'Idea Title', y: 380 },
+                { label: 'Category', y: 580 },
+                { label: 'Description', y: 780, tall: true },
+                { label: 'Complexity', y: 1180 }
+            ];
+
+            fields.forEach(field => {
+                // Label
+                ctx.font = '500 28px Space Grotesk';
+                ctx.fillStyle = '#04D9FF';
+                ctx.textAlign = 'left';
+                ctx.fillText(field.label, 80, field.y);
+
+                // Input field
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 2;
+                const inputHeight = field.tall ? 300 : 100;
+                roundRect(ctx, 80, field.y + 20, w - 160, inputHeight, 12);
+                ctx.fill();
+                ctx.stroke();
+
+                // Placeholder
+                ctx.font = '400 24px DM Sans';
+                ctx.fillStyle = '#808080';
+                ctx.fillText(field.tall ? 'Describe your MVP idea...' : 'Enter ' + field.label.toLowerCase(), 110, field.y + 75);
+            });
+
+            // Submit button
+            const btnY = 1380;
+            const btnGradient = ctx.createLinearGradient(0, btnY, 0, btnY + 100);
+            btnGradient.addColorStop(0, '#999');
+            btnGradient.addColorStop(0.2, '#fff');
+            btnGradient.addColorStop(0.5, '#E3E3E3');
+            btnGradient.addColorStop(0.8, '#fff');
+            btnGradient.addColorStop(1, '#999');
+            
+            ctx.fillStyle = btnGradient;
+            roundRect(ctx, w/2 - 300, btnY, 600, 100, 50);
+            ctx.fill();
+
+            ctx.shadowColor = '#04D9FF';
+            ctx.shadowBlur = 25;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.font = 'bold 36px Space Grotesk';
+            ctx.fillStyle = '#0B192A';
+            ctx.shadowBlur = 0;
+            ctx.textAlign = 'center';
+            ctx.fillText('🚀 Submit Idea', w/2, btnY + 63);
+        }
+
+        // ============================================
+        // SCREENSHOT 3 - 1080x1920 - Leaderboard
+        // ============================================
+        function drawScreenshot3(ctx, w, h) {
+            // Background
+            ctx.fillStyle = '#0B192A';
+            ctx.fillRect(0, 0, w, h);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(4, 217, 255, 0.06)';
+            ctx.lineWidth = 1;
+            for (let y = 0; y < h; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            // Header
+            ctx.fillStyle = 'rgba(30, 30, 30, 0.8)';
+            ctx.fillRect(0, 0, w, 120);
+            
+            ctx.font = 'bold 48px Orbitron';
+            ctx.fillStyle = '#E3E3E3';
+            ctx.textAlign = 'center';
+            ctx.fillText('24HRMVP', w/2, 75);
+
+            // Title
+            ctx.font = '600 52px Space Grotesk';
+            ctx.fillStyle = '#04D9FF';
+            ctx.shadowColor = '#04D9FF';
+            ctx.shadowBlur = 20;
+            ctx.fillText('🏆 Leaderboard', w/2, 240);
+
+            ctx.font = '400 28px DM Sans';
+            ctx.fillStyle = '#7DFDFE';
+            ctx.shadowBlur = 10;
+            ctx.fillText('Top Contributors', w/2, 300);
+
+            // Leaderboard entries
+            const users = [
+                { rank: 1, name: 'Builder_Alex', points: 2420, badge: '🥇' },
+                { rank: 2, name: 'CodeMaster_Sarah', points: 1850, badge: '🥈' },
+                { rank: 3, name: 'MVP_Wizard', points: 1560, badge: '🥉' },
+                { rank: 4, name: 'IdeaGenius_Mike', points: 1290, badge: '⭐' },
+                { rank: 5, name: 'FastShipper_Jen', points: 1120, badge: '⭐' },
+                { rank: 6, name: 'CloudArchitect', points: 890, badge: '⭐' },
+                { rank: 7, name: 'DesignPro_Tom', points: 750, badge: '⭐' }
+            ];
+
+            let y = 420;
+            users.forEach((user, i) => {
+                // Card
+                const alpha = user.rank <= 3 ? 0.18 : 0.12;
+                ctx.fillStyle = `rgba(190, 190, 190, ${alpha})`;
+                roundRect(ctx, 60, y, w - 120, 180, 16);
+                ctx.fill();
+
+                if (user.rank <= 3) {
+                    ctx.strokeStyle = 'rgba(4, 217, 255, 0.4)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                // Rank
+                ctx.font = 'bold 64px Space Mono';
+                ctx.fillStyle = user.rank <= 3 ? '#04D9FF' : '#7DFDFE';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = user.rank <= 3 ? '#04D9FF' : 'none';
+                ctx.shadowBlur = user.rank <= 3 ? 15 : 0;
+                ctx.fillText(`#${user.rank}`, 160, y + 80);
+
+                // Badge
+                ctx.font = '48px sans-serif';
+                ctx.shadowBlur = 0;
+                ctx.fillText(user.badge, 160, y + 140);
+
+                // Name
+                ctx.font = '600 36px Space Grotesk';
+                ctx.fillStyle = '#FAFAFA';
+                ctx.textAlign = 'left';
+                ctx.fillText(user.name, 280, y + 80);
+
+                // Points
+                ctx.font = 'bold 48px Space Mono';
+                ctx.fillStyle = '#04D9FF';
+                ctx.textAlign = 'right';
+                ctx.shadowColor = '#04D9FF';
+                ctx.shadowBlur = 15;
+                ctx.fillText(user.points.toLocaleString(), w - 100, y + 75);
+                
+                ctx.font = '400 24px DM Sans';
+                ctx.fillStyle = '#7DFDFE';
+                ctx.shadowBlur = 0;
+                ctx.fillText('points', w - 100, y + 115);
+
+                // Stats
+                ctx.font = '400 22px DM Sans';
+                ctx.fillStyle = '#B0B0B0';
+                ctx.textAlign = 'left';
+                ctx.fillText(`${5 - i} ideas  •  ${12 - i * 2} votes`, 280, y + 135);
+
+                y += 220;
+            });
+        }
+
+        // Helper function for rounded rectangles
+        function roundRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        function downloadAsset(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Auto-generate on page load
+        window.addEventListener('load', generateAllAssets);
+    </script>
+</body>
+</html>

@@ -1,0 +1,720 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24HRMVP | H.O.P.E. - Help Other People Excel</title>
+    <meta name="description" content="Join the H.O.P.E. campaign. Build technology that puts Main Street first using open source and ethical AI. Submit ideas, vote, and watch MVPs come to life in 24 hours.">
+
+    <!-- Open Graph / Twitter Meta Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://24hrmvp.xyz">
+    <meta property="og:title" content="24HRMVP | H.O.P.E. - Help Other People Excel">
+    <meta property="og:description" content="Community-driven innovation where the best ideas become real MVPs in 24 hours. Built with fairness, transparency, and Main Street in mind.">
+    <meta property="og:image" content="https://24hrmvp.xyz/og-image.png">
+
+    <!-- Farcaster Frame Meta Tags -->
+    <meta property="fc:frame" content="vNext">
+    <meta property="fc:frame:image" content="https://24hrmvp.xyz/frame-image.png">
+    <meta property="fc:frame:button:1" content="Follow @daftpixie">
+    <meta property="fc:frame:button:1:action" content="link">
+    <meta property="fc:frame:button:1:target" content="https://warpcast.com/daftpixie">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Chrome Gradients */
+            --chrome-gradient: linear-gradient(135deg, #A8A9AD 0%, #B4B5B8 20%, #C0C0C3 40%, #CBCCCD 60%, #D7D7D8 80%, #E3E3E3 100%);
+            --chrome-reflective: linear-gradient(180deg, #4B505A 0%, #B0C4DE 25%, #D1E1F6 50%, #CCCCCC 75%, #D8D8D8 100%);
+            --chrome-flow: linear-gradient(90deg, #999 5%, #fff 10%, #ccc 30%, #ddd 50%, #ccc 70%, #fff 80%, #999 95%);
+            /* Neon Colors */
+            --neon-cyan: #04D9FF;
+            --neon-blue: #1F51FF;
+            --neon-purple: #8A00C4;
+            --neon-pink: #FB48C4;
+            --neon-green: #2CFF05;
+            --electric-cyan: #00FEFC;
+            --tron-blue: #7DFDFE;
+            /* Backgrounds */
+            --bg-deepest: #0B192A;
+            --bg-primary: #1E1E1E;
+            --bg-charcoal: #232729;
+            --surface-1: #2E2E2E;
+            --surface-2: #383838;
+            /* Text */
+            --text-primary: #FAFAFA;
+            --text-secondary: #B0B0B0;
+            --text-tertiary: #808080;
+            /* Typography */
+            --font-display: 'Orbitron', sans-serif;
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+            --font-mono: 'Space Mono', monospace;
+            /* Animation */
+            --duration-fast: 200ms;
+            --duration-normal: 300ms;
+            --duration-slow: 400ms;
+            --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+            --ease-smooth: cubic-bezier(0.65, 0, 0.35, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-deepest);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Laser Grid Background */
+        .laser-grid {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            perspective: 1000px;
+            overflow: hidden;
+        }
+
+            .laser-grid::before {
+                content: '';
+                position: absolute;
+                width: 200%;
+                height: 200%;
+                bottom: 0;
+                left: -50%;
+                background-image: linear-gradient(rgba(4, 217, 255, 0.15) 2px, transparent 2px), linear-gradient(90deg, rgba(4, 217, 255, 0.15) 2px, transparent 2px);
+                background-size: 100px 100px;
+                transform: rotateX(60deg) translateZ(-500px);
+                animation: grid-scroll 20s linear infinite;
+            }
+
+        @keyframes grid-scroll {
+            from {
+                transform: rotateX(60deg) translateZ(-500px) translateY(0);
+            }
+
+            to {
+                transform: rotateX(60deg) translateZ(-500px) translateY(100px);
+            }
+        }
+
+        /* Scan Lines Effect */
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+            .scanlines::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient( transparent 50%, rgba(4, 217, 255, 0.02) 50% );
+                background-size: 100% 4px;
+                animation: scan 8s linear infinite;
+            }
+
+        @keyframes scan {
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 0 100%;
+            }
+        }
+
+        /* Main Container */
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            margin-bottom: 4rem;
+        }
+
+        .logo {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 900;
+            background: var(--chrome-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 20px rgba(4, 217, 255, 0.5));
+            position: relative;
+            text-decoration: none;
+        }
+
+            .logo::after {
+                content: 'MVP';
+                position: absolute;
+                right: -3.5rem;
+                top: 0.5rem;
+                font-family: var(--font-mono);
+                font-size: 0.8rem;
+                color: var(--neon-cyan);
+                font-weight: 400;
+            }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            position: relative;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: rgba(4, 217, 255, 0.1);
+            border: 1px solid var(--neon-cyan);
+            border-radius: 50px;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            color: var(--neon-cyan);
+            margin-bottom: 2rem;
+            box-shadow: 0 0 20px rgba(4, 217, 255, 0.3);
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #999 5%, #fff 20%, #ccc 40%, #ddd 50%, #ccc 60%, #fff 80%, #999 95% );
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+            animation: chrome-shimmer 3s linear infinite;
+            background-size: 200% 100%;
+        }
+
+        @keyframes chrome-shimmer {
+            0% {
+                background-position: -100% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .hero-subtitle {
+            font-family: var(--font-heading);
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 300;
+            color: var(--neon-cyan);
+            margin-bottom: 2rem;
+            text-shadow: 0 0 20px rgba(4, 217, 255, 0.5);
+        }
+
+        .hero-description {
+            font-size: 1.25rem;
+            line-height: 1.75;
+            color: var(--text-secondary);
+            max-width: 800px;
+            margin: 0 auto 3rem;
+        }
+
+        /* CTA Button */
+        .btn-chrome-primary {
+            position: relative;
+            display: inline-block;
+            padding: 1rem 3rem;
+            font-family: var(--font-heading);
+            font-size: 1.125rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            overflow: hidden;
+            background: linear-gradient(135deg, #999 5%, #fff 20%, #ccc 40%, #ddd 50%, #ccc 60%, #fff 80%, #999 95% );
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 2px 5px rgba(0, 0, 0, 0.3);
+            color: #333;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+            transition: all 0.2s var(--ease-smooth);
+            text-decoration: none;
+        }
+
+        .btn-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-shine {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent );
+            transform: skewX(-25deg);
+            z-index: 1;
+        }
+
+        .btn-chrome-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0, 0, 0, 0.4), 0 0 30px rgba(4, 217, 255, 0.5);
+        }
+
+            .btn-chrome-primary:hover .btn-shine {
+                animation: shine-sweep 0.6s ease-out;
+            }
+
+        @keyframes shine-sweep {
+            from {
+                left: -100%;
+            }
+
+            to {
+                left: 200%;
+            }
+        }
+
+        /* Features Grid */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin: 6rem 0;
+        }
+
+        .feature-card {
+            position: relative;
+            padding: 2rem;
+            border-radius: 20px;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(190, 190, 190, 0.15), rgba(230, 230, 230, 0.25) );
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            transition: all 0.3s var(--ease-standard);
+        }
+
+            .feature-card::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                backdrop-filter: blur(12px) saturate(180%);
+                -webkit-backdrop-filter: blur(12px) saturate(180%);
+                z-index: 0;
+            }
+
+        .feature-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 1.5rem;
+            background: var(--chrome-gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 0 30px rgba(4, 217, 255, 0.4);
+        }
+
+        .feature-title {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--neon-cyan);
+        }
+
+        .feature-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.12), 0 16px 32px rgba(0, 0, 0, 0.12), 0 0 40px rgba(4, 217, 255, 0.3);
+        }
+
+        /* Campaign Section */
+        .campaign {
+            text-align: center;
+            padding: 4rem 0;
+            position: relative;
+        }
+
+        .campaign-title {
+            font-family: var(--font-heading);
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .campaign-tagline {
+            font-family: var(--font-mono);
+            font-size: 1.25rem;
+            color: var(--electric-cyan);
+            margin-bottom: 2rem;
+            letter-spacing: 0.1em;
+        }
+
+        .campaign-text {
+            max-width: 800px;
+            margin: 0 auto;
+            font-size: 1.125rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+            padding: 2rem;
+            background: rgba(4, 217, 255, 0.05);
+            border: 1px solid rgba(4, 217, 255, 0.2);
+            border-radius: 20px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: var(--font-mono);
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 20px rgba(4, 217, 255, 0.5);
+        }
+
+        .stat-label {
+            font-family: var(--font-heading);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-tertiary);
+            margin-top: 0.5rem;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 3rem 0;
+            margin-top: 6rem;
+            border-top: 1px solid rgba(4, 217, 255, 0.2);
+        }
+
+        .footer-text {
+            color: var(--text-tertiary);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .social-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            transition: all 0.2s var(--ease-smooth);
+        }
+
+            .social-link:hover {
+                color: var(--neon-cyan);
+                text-shadow: 0 0 10px rgba(4, 217, 255, 0.5);
+            }
+
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+
+            .laser-grid::before,
+            .scanlines::after {
+                animation: none;
+            }
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .hero-title {
+                font-size: 3rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.5rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="laser-grid"></div>
+    <div class="scanlines"></div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="nav">
+            <a href="/" class="logo">24HR</a>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="badge">🚀 LAUNCHING THE H.O.P.E. CAMPAIGN</div>
+
+            <h1 class="hero-title">H.O.P.E.</h1>
+            <h2 class="hero-subtitle">Help Other People Excel</h2>
+
+            <p class="hero-description">
+                Join a community where the best ideas become real MVPs in 24 hours.
+                We're building technology that puts Main Street first, using open source
+                and ethical AI to create positive impact. Not with empty buzzwords,
+                but through action.
+            </p>
+
+            <a href="https://warpcast.com/daftpixie" target="_blank" rel="noopener noreferrer" class="btn-chrome-primary">
+                <span class="btn-content">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    Follow @daftpixie on Farcaster
+                </span>
+                <span class="btn-shine"></span>
+            </a>
+        </section>
+
+        <!-- Features Grid -->
+        <section class="features">
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon">🗳️</div>
+                    <h3 class="feature-title">Community Driven</h3>
+                    <p class="feature-description">
+                        Submit your ideas and vote for the best ones. Every week,
+                        the top-voted concept gets built into a real MVP by our
+                        expert team with AI assistance.
+                    </p>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title">24-Hour Sprints</h3>
+                    <p class="feature-description">
+                        Watch ideas transform into functional products in just 24 hours.
+                        Human expertise leads the way, with AI as a powerful enabler,
+                        not a replacement.
+                    </p>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon">🏆</div>
+                    <h3 class="feature-title">Transparent & Fair</h3>
+                    <p class="feature-description">
+                        Gamified experience with achievements, leaderboards, and rewards.
+                        Every vote counts, every contribution matters, and the process
+                        is completely transparent.
+                    </p>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon">🌍</div>
+                    <h3 class="feature-title">Main Street First</h3>
+                    <p class="feature-description">
+                        We prioritize real-world impact over Silicon Valley hype.
+                        Building tools and solutions that actually help everyday people
+                        and small businesses thrive.
+                    </p>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon">🔓</div>
+                    <h3 class="feature-title">Open Source</h3>
+                    <p class="feature-description">
+                        Every MVP we build is open source. Learn from the code,
+                        fork it, improve it, or use it as a foundation for your
+                        own projects.
+                    </p>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon">🤝</div>
+                    <h3 class="feature-title">Ethical AI</h3>
+                    <p class="feature-description">
+                        AI amplifies human creativity, it doesn't replace it.
+                        We use Constitutional AI principles to ensure technology
+                        serves people, not the other way around.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Campaign Section -->
+        <section class="campaign">
+            <h2 class="campaign-title">Why H.O.P.E. Matters</h2>
+            <p class="campaign-tagline">HELP • OTHER • PEOPLE • EXCEL</p>
+
+            <div class="campaign-text">
+                <p style="margin-bottom: 1.5rem;">
+                    In a world where AI threatens to displace workers and technology
+                    often serves only the privileged few, we're building something different.
+                    The H.O.P.E. campaign isn't just about hope as a feeling—it's hope as action.
+                </p>
+                <p style="margin-bottom: 1.5rem;">
+                    Every idea submitted, every vote cast, and every MVP built is a step
+                    toward a future where technology empowers rather than replaces,
+                    where innovation serves Main Street not just Wall Street.
+                </p>
+                <p>
+                    Join us in showing the world that when we help other people excel,
+                    we all rise together. Technology, built right, is cause for hope.
+                </p>
+            </div>
+        </section>
+
+        <!-- Stats Preview -->
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">24</div>
+                <div class="stat-label">Hour Builds</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Open Source</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">∞</div>
+                <div class="stat-label">Possibilities</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">1</div>
+                <div class="stat-label">Community</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p class="footer-text">
+                © 2024 24HRMVP | Building with H.O.P.E. | Powered by Community
+            </p>
+            <div class="social-links">
+                <a href="https://warpcast.com/daftpixie" target="_blank" rel="noopener noreferrer" class="social-link">
+                    Farcaster
+                </a>
+                <a href="https://x.com/VTIStablecoin" target="_blank" rel="noopener noreferrer" class="social-link">
+                    X / Twitter
+                </a>
+                <a href="https://github.com/BTMMatty" target="_blank" rel="noopener noreferrer" class="social-link">
+                    GitHub
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Add some interactivity
+        document.addEventListener('DOMContentLoaded', () => {
+            // Animate stats on scroll
+            const observerOptions = {
+                threshold: 0.5,
+                rootMargin: '0px 0px -100px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animation = 'fadeInUp 0.6s ease-out';
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.feature-card, .stat').forEach(el => {
+                observer.observe(el);
+            });
+        });
+
+        // Add fadeInUp animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
