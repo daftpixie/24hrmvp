@@ -1,0 +1,10 @@
+
+# Visual Studio
+.vs/
+
+# Build scripts (local only)
+24hrmvp-app/scripts/
+
+node_modules/
+
+24hrmvp-app/backend/.env

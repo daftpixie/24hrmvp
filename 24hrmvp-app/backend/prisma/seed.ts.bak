@@ -1,0 +1,144 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Starting database seed...');
+
+  // Create admin user (REPLACE FID 3 with your actual Farcaster FID)
+  const admin = await prisma.user.upsert({
+    where: { fid: 3 },
+    update: {
+      isAdmin: true,
+      points: 1000,
+      reputation: 500,
+    },
+    create: {
+      fid: 3,
+      username: 'mattyh',
+      displayName: 'Matt H',
+      membershipTier: 'premium',
+      points: 1000,
+      reputation: 500,
+      level: 10,
+      isAdmin: true,
+    },
+  });
+  console.log('✅ Admin user created:', admin.username);
+
+  // Create test users
+  const testUsers = [];
+  for (let i = 1; i <= 5; i++) {
+    const user = await prisma.user.create({
+      data: {
+        fid: 1000 + i,
+        username: `testuser${i}`,
+        displayName: `Test User ${i}`,
+        membershipTier: 'free',
+        points: Math.floor(Math.random() * 100),
+        reputation: Math.floor(Math.random() * 50),
+        level: 1,
+      },
+    });
+    testUsers.push(user);
+  }
+  console.log(`✅ Created ${testUsers.length} test users`);
+
+  // Create first voting cycle (7 days)
+  const now = new Date();
+  const endDate = new Date(now);
+  endDate.setDate(endDate.getDate() + 7);
+
+  const cycle = await prisma.votingCycle.create({
+    data: {
+      name: 'Beta Launch - Week 1',
+      startDate: now,
+      endDate: endDate,
+      status: 'active',
+    },
+  });
+  console.log('✅ Voting cycle created:', cycle.name);
+  console.log(`   Start: ${cycle.startDate.toISOString()}`);
+  console.log(`   End: ${cycle.endDate.toISOString()}`);
+
+  // Create sample ideas
+  const sampleIdeas = [
+    {
+      title: 'AI-Powered Code Review Bot for Farcaster',
+      description: 'Automatically review pull requests and provide intelligent feedback directly in Farcaster channels. Uses Claude Sonnet 4.5 for deep code analysis and best practice recommendations.',
+      category: 'productivity',
+      complexity: 'complex',
+      tags: ['ai', 'coding', 'automation'],
+    },
+    {
+      title: 'Daily Motivation Frame Generator',
+      description: 'Generate beautiful motivational quote frames every morning. Users can customize themes, fonts, and share directly to their Farcaster feed.',
+      category: 'social',
+      complexity: 'simple',
+      tags: ['frames', 'motivation', 'daily'],
+    },
+    {
+      title: 'Collaborative Playlist Builder',
+      description: 'Create collaborative music playlists with your Farcaster community. Vote on songs, suggest additions, and discover new music together.',
+      category: 'entertainment',
+      complexity: 'medium',
+      tags: ['music', 'collaboration', 'community'],
+    },
+  ];
+
+  for (const ideaData of sampleIdeas) {
+    const randomUser = testUsers[Math.floor(Math.random() * testUsers.length)];
+    
+    const idea = await prisma.idea.create({
+      data: {
+        ...ideaData,
+        userId: randomUser.id,
+        votingCycleId: cycle.id,
+        status: 'pending',
+        voteCount: 0,
+        voteWeight: 0,
+      },
+    });
+
+    // Create some random votes
+    const numVotes = Math.floor(Math.random() * 3) + 1;
+    for (let i = 0; i < numVotes; i++) {
+      const voter = testUsers[i];
+      try {
+        await prisma.vote.create({
+          data: {
+            userId: voter.id,
+            ideaId: idea.id,
+            weight: 1,
+          },
+        });
+        await prisma.idea.update({
+          where: { id: idea.id },
+          data: {
+            voteCount: { increment: 1 },
+            voteWeight: { increment: 1 },
+          },
+        });
+      } catch (e) {
+        // Skip duplicate votes
+      }
+    }
+  }
+  console.log(`✅ Created ${sampleIdeas.length} sample ideas with votes`);
+
+  console.log('\n🎉 Database seeding complete!');
+  console.log('\n📊 Summary:');
+  console.log(`   - 1 admin user (FID: ${admin.fid})`);
+  console.log(`   - ${testUsers.length} test users`);
+  console.log(`   - 1 active voting cycle`);
+  console.log(`   - ${sampleIdeas.length} sample ideas`);
+}
+
+main()
+  .catch((e) => {
+    console.error('❌ Error seeding database:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

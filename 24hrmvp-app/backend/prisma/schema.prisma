@@ -1,0 +1,1182 @@
+// 24HRMVP Production Database Schema - MULTICHAIN AUTH UPDATE
+// Includes: Foundation + Grid (Phases 1-4) + Vote Purchasing + Enhanced Submissions + Multichain Auth
+// Domain: api.24hrmvp.xyz
+// Last Updated: December 4, 2025
+// Migration: add_multichain_auth
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MULTICHAIN AUTHENTICATION ENUMS
+// ============================================
+
+enum AuthProvider {
+  FARCASTER // Farcaster Quick Auth (FID-based)
+  SIWE      // Sign-In with Ethereum (EVM wallets)
+  SIWS      // Sign-In with Solana
+}
+
+enum ChainType {
+  EVM    // Ethereum, Base, Polygon, Arbitrum, Optimism, etc.
+  SOLANA // Solana mainnet/devnet
+}
+
+// ============================================
+// CORE USER MANAGEMENT
+// ============================================
+
+model User {
+  id          String  @id @default(cuid())
+  
+  // UPDATED: FID now optional for wallet-only users
+  fid         Int?    @unique
+  username    String  @unique
+  displayName String?
+  pfpUrl      String?
+  bio         String?
+
+  custodyAddress String?
+  verifications  String[]
+
+  membershipTier String @default("free")
+  points         Int    @default(0)
+  reputation     Int    @default(0)
+  level          Int    @default(1)
+
+  isAdmin      Boolean   @default(false)
+  isBanned     Boolean   @default(false)
+  lastActiveAt DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastSeenAt   DateTime?
+
+  // NEW: Primary authentication tracking
+  primaryAuthProvider  AuthProvider @default(FARCASTER)
+  primaryWalletAddress String?      // Quick reference to primary wallet
+
+  // NEW: Multichain auth relations
+  accounts      Account[]
+  cryptoWallets CryptoWallet[] @relation("UserCryptoWallets")
+
+  // Core relations
+  ideas            Idea[]
+  votes            Vote[]
+  comments         Comment[]
+  achievements     Achievement[]
+  pointHistory     PointHistory[]
+  streak           Streak?
+  wallet           UserWallet?
+  userAchievements UserAchievement[]
+  userStreaks      UserStreak[]
+
+  // THE GRID relations
+  forumPosts     ForumPost[]       @relation("ForumPostAuthor")
+  forumVotes     ForumPostVote[]   @relation("ForumVotes")
+  forumBookmarks ForumBookmark[]   @relation("ForumBookmarks")
+  moderatedPosts ForumPost[]       @relation("PostModerator")
+  moderatedItems ModerationQueue[] @relation("ModerationReviewer")
+
+  // CHAT SYSTEM relations (Phase 3A)
+  chatRoomsCreated  ChatRoom[]        @relation("ChatRoomCreator")
+  chatMessages      ChatMessage[]     @relation("ChatMessageAuthor")
+  chatParticipation ChatParticipant[] @relation("ChatParticipation")
+
+  // LIVESTREAMING relations (Phase 4)
+  hostedStreams      Livestream[]        @relation("StreamHost")
+  watchedStreams     LivestreamViewer[]  @relation("StreamViewer")
+  streamDestinations StreamDestination[] @relation("UserDestinations")
+
+  // VOTE PURCHASING relations
+  voteCredits   VoteCredit[]
+  votePurchases VotePurchase[]
+
+  @@index([fid])
+  @@index([username])
+  @@index([points])
+  @@index([reputation])
+  @@index([createdAt])
+  @@index([primaryWalletAddress])
+}
+
+// ============================================
+// MULTICHAIN AUTHENTICATION MODELS
+// ============================================
+
+// Account links authentication providers to users
+// One user can have multiple accounts (Farcaster + multiple wallets)
+model Account {
+  id                String       @id @default(cuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider          AuthProvider
+  providerAccountId String       // FID (as string) for Farcaster, wallet address for SIWE/SIWS
+
+  // Farcaster-specific fields
+  fid               Int?
+
+  // Wallet-specific fields
+  walletAddress     String?
+  chainId           Int?         // EVM chain ID (1=Ethereum, 8453=Base, 137=Polygon, etc.)
+  chainType         ChainType?
+
+  // Metadata
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  lastUsedAt        DateTime     @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@index([walletAddress])
+  @@index([fid])
+  @@index([provider])
+}
+
+// Crypto wallet addresses (users can link multiple wallets)
+model CryptoWallet {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserCryptoWallets", fields: [userId], references: [id], onDelete: Cascade)
+
+  address     String    @unique  // Normalized: lowercase for EVM, as-is for Solana
+  chainType   ChainType
+  chainId     Int?               // For EVM chains (1=Ethereum, 8453=Base, etc.), null for Solana
+
+  isPrimary   Boolean   @default(false)
+  label       String?            // User-defined label ("Main Wallet", "Trading", etc.)
+
+  // Verification tracking
+  verifiedAt  DateTime  @default(now())
+  lastUsedAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([chainType])
+  @@index([isPrimary])
+}
+
+// Nonce for SIWE/SIWS authentication (short-lived, single-use)
+// Production should use Redis for better performance; this is the fallback
+model AuthNonce {
+  id          String    @id @default(cuid())
+  nonce       String    @unique
+  sessionId   String?            // Optional session correlation
+  chainType   ChainType
+
+  expiresAt   DateTime           // TTL: 5 minutes from creation
+  usedAt      DateTime?          // Marked when consumed (single-use)
+  createdAt   DateTime  @default(now())
+
+  @@index([nonce])
+  @@index([expiresAt])
+}
+
+// ============================================
+// VOTING CYCLES & IDEAS
+// ============================================
+
+model VotingCycle {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  status    String   @default("active")
+
+  winnerId String? @unique
+  winner   Idea?   @relation("CycleWinner", fields: [winnerId], references: [id])
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastSeenAt DateTime?
+
+  ideas Idea[] @relation("CycleIdeas")
+
+  @@index([status])
+  @@index([startDate, endDate])
+}
+
+model Idea {
+  id          String @id @default(cuid())
+  title       String
+  description String @db.Text
+  category    String
+  complexity  String
+
+  tags        String[]
+  attachments String[] // Keep for backward compatibility
+
+  // NEW COMPREHENSIVE SPECIFICATION FIELDS
+  targetAudience        String?  @db.Text // Who will use this?
+  coreFeatures          String[] // Array of core features (3-10)
+  technicalRequirements String?  @db.Text // Tech stack, APIs, dependencies
+  expectedTimeline      String? // Development timeline estimate
+  successMetrics        String?  @db.Text // How to measure success
+
+  // NEW FILE ATTACHMENT METADATA
+  fileAttachments Json? // Structured: [{filename, url, type, size, uploadedAt}]
+  fileCount       Int   @default(0)
+
+  // ENHANCED METADATA
+  isPremiumBoosted Boolean   @default(false)
+  boostLevel       Int       @default(0) // 0=none, 1=basic, 2=featured, 3=premium
+  boostExpiresAt   DateTime?
+
+  status String @default("pending")
+
+  voteCount  Int @default(0)
+  voteWeight Int @default(0)
+
+  submittedBy User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+
+  votingCycle   VotingCycle @relation("CycleIdeas", fields: [votingCycleId], references: [id])
+  votingCycleId String
+
+  wonCycle VotingCycle? @relation("CycleWinner")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastSeenAt    DateTime?
+  approvedAt    DateTime?
+  implementedAt DateTime?
+
+  votes      Vote[]
+  comments   Comment[]
+  mvpProject MVPProject?
+
+  // THE GRID relation
+  forumPosts ForumPost[] @relation("IdeaDiscussions")
+
+  @@index([votingCycleId])
+  @@index([userId])
+  @@index([status])
+  @@index([voteCount(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([category])
+  @@index([isPremiumBoosted])
+}
+
+model Vote {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  idea   Idea   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  ideaId String
+
+  weight Int @default(1)
+
+  createdAt DateTime @default(now())
+
+  // Vote consumption tracking
+  consumption VoteConsumption?
+
+  @@unique([userId, ideaId])
+  @@index([ideaId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Comment {
+  id      String @id @default(cuid())
+  content String @db.Text
+
+  parentId String?
+  path     String  @db.VarChar(1000)
+  depth    Int     @default(0)
+
+  score Int @default(0)
+
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+
+  idea   Idea   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  ideaId String
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastSeenAt DateTime?
+
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([ideaId, path])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([createdAt])
+}
+
+model MVPProject {
+  id String @id @default(cuid())
+
+  idea   Idea   @relation(fields: [ideaId], references: [id])
+  ideaId String @unique
+
+  repoUrl       String?
+  deploymentUrl String?
+
+  status   String @default("queued")
+  progress Int    @default(0)
+
+  logs         Json[]
+  errorMessage String? @db.Text
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastSeenAt  DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Achievement {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  type        String
+  name        String
+  description String
+  iconUrl     String?
+
+  rarity   String @default("common")
+  xpReward Int    @default(0)
+
+  earnedAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+}
+
+model PointHistory {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  points      Int
+  action      String
+  description String?
+
+  sourceId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Streak {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  type           String
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  lastActivityAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UserWallet {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  balance        Decimal @default(0) @db.Decimal(12, 2)
+  lifetimeEarned Decimal @default(0) @db.Decimal(12, 2)
+
+  transactions CurrencyTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+enum TransactionType {
+  EARN
+  SPEND
+  TRANSFER_IN
+  TRANSFER_OUT
+  ADJUSTMENT
+  REFUND
+}
+
+model CurrencyTransaction {
+  id       String     @id @default(cuid())
+  walletId String
+  wallet   UserWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  amount      Decimal         @db.Decimal(12, 2)
+  type        TransactionType
+  description String?
+
+  referenceType String?
+  referenceId   String?
+  balanceAfter  Decimal @db.Decimal(12, 2)
+  metadata      Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([walletId, createdAt(sort: Desc)])
+}
+
+enum BadgeRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+model Badge {
+  id            String      @id @default(cuid())
+  name          String      @unique
+  description   String
+  iconUrl       String?
+  category      String
+  rarity        BadgeRarity @default(COMMON)
+  pointsAwarded Int         @default(0)
+  requirements  Json
+  isActive      Boolean     @default(true)
+
+  achievements UserAchievement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, isActive])
+}
+
+model UserAchievement {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  badgeId String
+  badge   Badge  @relation(fields: [badgeId], references: [id])
+
+  progress    Int       @default(0)
+  targetValue Int
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, badgeId])
+  @@index([userId, isCompleted])
+}
+
+model UserStreak {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type           String
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActivityAt DateTime?
+  nextDeadline   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, type])
+}
+
+model LeaderboardEntry {
+  id           String   @id @default(cuid())
+  userId       String
+  period       String
+  category     String
+  score        Decimal  @db.Decimal(12, 2)
+  rank         Int?
+  calculatedAt DateTime @default(now())
+
+  @@unique([userId, period, category])
+  @@index([period, category, score(sort: Desc)])
+}
+
+model NotificationToken {
+  id String @id @default(cuid())
+
+  userId          String
+  token           String  @unique
+  notificationUrl String
+  enabled         Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Payment {
+  id           String  @id @default(cuid())
+  userId       String
+  amount       Decimal @db.Decimal(12, 2)
+  currency     String  @default("usd")
+  status       String  @default("pending")
+  provider     String
+  providerTxId String? @unique
+  metadata     Json?
+
+  // Link to vote purchase if applicable
+  votePurchaseId String?       @unique
+  votePurchase   VotePurchase? @relation(fields: [votePurchaseId], references: [id])
+
+  // Enhanced metadata
+  itemType     String? // "vote_credits", "boost", "membership"
+  itemQuantity Int? // Number of items purchased
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([providerTxId])
+  @@index([itemType])
+}
+
+// ============================================
+// VOTE CREDITS & PURCHASING SYSTEM
+// ============================================
+
+enum VoteCreditSource {
+  FREE_DAILY       // Base allocation
+  PURCHASED_STRIPE // Bought with fiat
+  PURCHASED_CRYPTO // Bought with USDC on Base
+  PURCHASED_POINTS // Bought with platform points
+  EARNED_REWARD    // Earned through activity
+  ADMIN_GRANT      // Admin-granted
+}
+
+enum VotePurchaseStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// Track user's available vote credits
+model VoteCredit {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Credit details
+  amount      Int              // Number of vote credits
+  source      VoteCreditSource
+  description String?
+
+  // Purchase tracking (if applicable)
+  purchaseId String?       @unique
+  purchase   VotePurchase? @relation(fields: [purchaseId], references: [id])
+
+  // Expiration
+  expiresAt DateTime?
+  isExpired Boolean   @default(false)
+
+  // Usage tracking
+  consumed  Int @default(0) // How many used
+  remaining Int // Calculated: amount - consumed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isExpired])
+  @@index([expiresAt])
+}
+
+// Track vote purchases
+model VotePurchase {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Purchase details
+  voteCredits   Int     // Number of votes purchased
+  amount        Decimal @db.Decimal(12, 2) // Price paid
+  currency      String // usd, usdc, points
+  paymentMethod String // stripe, coinbase, points
+
+  // Payment tracking
+  status    VotePurchaseStatus @default(PENDING)
+  paymentId String?            @unique // Stripe payment intent ID or transaction hash
+  metadata  Json? // Payment-specific metadata
+
+  // Credits relationship
+  credits VoteCredit[]
+
+  // Payment relationship
+  payment Payment?
+
+  // Timestamps
+  purchasedAt DateTime?
+  completedAt DateTime?
+  refundedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([paymentId])
+}
+
+// Track individual vote consumption from credits
+model VoteConsumption {
+  id String @id @default(cuid())
+
+  vote   Vote   @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  voteId String @unique
+
+  creditId     String? // Which credit pool was used (null for legacy votes)
+  creditSource VoteCreditSource @default(FREE_DAILY)
+
+  createdAt DateTime @default(now())
+
+  @@index([creditId])
+}
+
+// Pricing configuration (stored in DB)
+model VotePricing {
+  id String @id @default(cuid())
+
+  // Package details
+  packageName String @unique // "single", "pack_5", "pack_20", "pack_100"
+  voteCount   Int // Number of votes in package
+
+  // Pricing by currency
+  priceUsd    Decimal @db.Decimal(12, 2)
+  priceUsdc   Decimal @db.Decimal(12, 2)
+  pricePoints Int
+
+  // Stripe product IDs
+  stripePriceId String?
+
+  // Display
+  displayName String
+  description String?
+  isActive    Boolean @default(true)
+  isPopular   Boolean @default(false)
+
+  // Metadata
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+// ============================================
+// THE GRID - PHASE 1
+// Social Aggregation, Forum, Moderation
+// ============================================
+
+// Grid-specific enums
+enum SocialPlatform {
+  FARCASTER
+  TWITTER
+  INSTAGRAM
+  TIKTOK
+}
+
+enum PostType {
+  DISCUSSION
+  QUESTION
+  ANNOUNCEMENT
+  SHOWCASE
+  FEEDBACK
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+  ESCALATED
+}
+
+enum ModerationEntityType {
+  SOCIAL_POST
+  FORUM_POST
+  COMMENT
+  USER
+  CHAT_MESSAGE
+}
+
+// --------------------------------------------
+// SOCIAL AGGREGATION
+// --------------------------------------------
+
+model SocialPost {
+  id         String         @id @default(cuid())
+  platform   SocialPlatform
+  externalId String
+
+  // Author info (denormalized for display)
+  authorFid         Int?
+  authorUsername    String
+  authorDisplayName String?
+  authorAvatar      String?
+
+  // Content
+  content   String   @db.Text
+  mediaUrls String[]
+  hashtags  String[]
+  mentions  String[]
+
+  // Farcaster-specific
+  channelId  String?
+  castHash   String?
+  parentHash String?
+
+  // Engagement (denormalized from source)
+  likes       Int @default(0)
+  reposts     Int @default(0)
+  replies     Int @default(0)
+  impressions Int @default(0)
+
+  // URLs
+  externalUrl String?
+
+  // Moderation
+  isHidden       Boolean @default(false)
+  isFeatured     Boolean @default(false)
+  moderationFlag String?
+
+  // Timestamps
+  publishedAt DateTime
+  fetchedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([platform, externalId])
+  @@index([platform, publishedAt(sort: Desc)])
+  @@index([authorFid])
+  @@index([channelId, publishedAt(sort: Desc)])
+  @@index([isFeatured, publishedAt(sort: Desc)])
+}
+
+// --------------------------------------------
+// FORUM / THREADED DISCUSSIONS
+// --------------------------------------------
+
+model ForumPost {
+  id    String  @id @default(cuid())
+  slug  String  @unique
+  title String?
+
+  // Content
+  content     String  @db.Text
+  contentHtml String? @db.Text
+
+  // Type
+  type PostType @default(DISCUSSION)
+
+  // Author
+  author   User   @relation("ForumPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+
+  // Threading (adjacency list)
+  parentId String?
+  parent   ForumPost?  @relation("ForumPostReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  ForumPost[] @relation("ForumPostReplies")
+  depth    Int         @default(0)
+
+  // Link to idea (optional)
+  idea   Idea?   @relation("IdeaDiscussions", fields: [ideaId], references: [id], onDelete: SetNull)
+  ideaId String?
+
+  // Voting (denormalized for performance)
+  upvotes     Int   @default(0)
+  downvotes   Int   @default(0)
+  score       Int   @default(0)
+  wilsonScore Float @default(0)
+  hotScore    Float @default(0)
+
+  // Metadata
+  replyCount Int      @default(0)
+  viewCount  Int      @default(0)
+  tags       String[]
+
+  // Status
+  isPinned Boolean @default(false)
+  isLocked Boolean @default(false)
+
+  // Moderation
+  moderationStatus ModerationStatus @default(APPROVED)
+  moderatedBy      User?            @relation("PostModerator", fields: [moderatedById], references: [id])
+  moderatedById    String?
+  moderatedAt      DateTime?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastReplyAt DateTime?
+
+  // Relations
+  votes     ForumPostVote[] @relation("PostVotes")
+  bookmarks ForumBookmark[] @relation("PostBookmarks")
+
+  @@index([type, hotScore(sort: Desc)])
+  @@index([type, wilsonScore(sort: Desc)])
+  @@index([type, createdAt(sort: Desc)])
+  @@index([isPinned, hotScore(sort: Desc)])
+  @@index([parentId])
+  @@index([authorId])
+  @@index([ideaId])
+  @@index([moderationStatus])
+}
+
+model ForumPostVote {
+  id String @id @default(cuid())
+
+  user   User   @relation("ForumVotes", fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  post   ForumPost @relation("PostVotes", fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+
+  value Int // 1 for upvote, -1 for downvote
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, postId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model ForumBookmark {
+  id String @id @default(cuid())
+
+  user   User   @relation("ForumBookmarks", fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  post   ForumPost @relation("PostBookmarks", fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+// --------------------------------------------
+// CONTENT MODERATION
+// --------------------------------------------
+
+model ModerationQueue {
+  id String @id @default(cuid())
+
+  entityType ModerationEntityType
+  entityId   String
+
+  // AI moderation results
+  aiScore      Float?
+  aiCategories Json?
+  aiReason     String?
+
+  // Human review
+  action       ModerationStatus @default(PENDING)
+  reviewedBy   User?            @relation("ModerationReviewer", fields: [reviewedById], references: [id])
+  reviewedById String?
+  reviewNotes  String?
+  reviewedAt   DateTime?
+
+  // User reports
+  reportedBy   String?
+  reportReason String?
+  reportCount  Int     @default(1)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([entityType, entityId])
+  @@index([action, createdAt(sort: Desc)])
+  @@index([entityType, action])
+  @@index([reviewedById])
+}
+
+// ============================================
+// THE GRID - PHASE 3A
+// Chat System with Real-Time Messaging
+// ============================================
+
+enum ChatRoomType {
+  PUBLIC
+  PRIVATE
+  DIRECT
+  IDEA
+}
+
+enum ChatRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+// --------------------------------------------
+// CHAT ROOMS
+// --------------------------------------------
+
+model ChatRoom {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  description String?
+  iconUrl     String?
+
+  type ChatRoomType @default(PUBLIC)
+
+  createdById String
+  createdBy   User   @relation("ChatRoomCreator", fields: [createdById], references: [id])
+
+  maxMembers    Int     @default(100)
+  isActive      Boolean @default(true)
+  allowReplies  Boolean @default(true)
+  slowModeDelay Int     @default(0)
+
+  memberCount  Int @default(0)
+  messageCount Int @default(0)
+
+  lastMessageAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  messages     ChatMessage[]
+  participants ChatParticipant[]
+
+  // Phase 4: Livestreaming
+  livestream Livestream?
+
+  @@index([slug])
+  @@index([type, isActive])
+  @@index([createdById])
+  @@index([lastMessageAt(sort: Desc)])
+}
+
+// --------------------------------------------
+// CHAT MESSAGES
+// --------------------------------------------
+
+model ChatMessage {
+  id      String @id @default(cuid())
+  content String @db.Text
+
+  roomId String
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation("ChatMessageAuthor", fields: [authorId], references: [id])
+
+  replyToId String?
+  replyTo   ChatMessage?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[] @relation("MessageReplies")
+
+  attachments String[]
+  mentions    String[]
+  metadata    Json?
+
+  isEdited  Boolean @default(false)
+  isDeleted Boolean @default(false)
+  isPinned  Boolean @default(false)
+
+  moderationStatus ModerationStatus @default(APPROVED)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  editedAt  DateTime?
+
+  @@index([roomId, createdAt(sort: Desc)])
+  @@index([authorId])
+  @@index([replyToId])
+  @@index([roomId, isPinned])
+}
+
+// --------------------------------------------
+// CHAT PARTICIPANTS
+// --------------------------------------------
+
+model ChatParticipant {
+  id String @id @default(cuid())
+
+  roomId String
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("ChatParticipation", fields: [userId], references: [id], onDelete: Cascade)
+
+  role ChatRole @default(MEMBER)
+
+  nickname String?
+
+  isMuted  Boolean @default(false)
+  isBanned Boolean @default(false)
+
+  lastReadAt  DateTime @default(now())
+  unreadCount Int      @default(0)
+
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@index([roomId, role])
+  @@index([userId, lastReadAt(sort: Desc)])
+}
+
+// ============================================
+// THE GRID - PHASE 4
+// Livestreaming with Multi-Platform Simulcast
+// ============================================
+
+enum StreamStatus {
+  DRAFT
+  SCHEDULED
+  STARTING
+  LIVE
+  ENDING
+  ENDED
+  CANCELLED
+  ERROR
+}
+
+// --------------------------------------------
+// LIVESTREAMS
+// --------------------------------------------
+
+model Livestream {
+  id          String       @id @default(cuid())
+  title       String
+  description String?      @db.Text
+  status      StreamStatus @default(DRAFT)
+
+  // Castr Integration
+  castrStreamId  String? @unique
+  castrIngestUrl String?
+  castrStreamKey String?
+  playbackUrl    String?
+
+  // Multi-Platform Destinations (JSON array)
+  // Format: [{platform: "youtube", enabled: true, rtmpUrl: "...", status: "connected"}]
+  destinations Json? @default("[]")
+
+  // Visual Assets
+  thumbnailUrl   String?
+  placeholderUrl String?
+
+  // Host/Creator
+  hostId String
+  host   User   @relation("StreamHost", fields: [hostId], references: [id])
+
+  // Analytics
+  viewerCount Int @default(0)
+  peakViewers Int @default(0)
+  totalViews  Int @default(0)
+
+  // Timing
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  endedAt     DateTime?
+  duration    Int?
+
+  // Chat Integration (reuse existing Grid chat)
+  chatRoomId String?   @unique
+  chatRoom   ChatRoom? @relation(fields: [chatRoomId], references: [id])
+
+  // Metadata
+  tags      String[] @default([])
+  category  String?
+  isPublic  Boolean  @default(true)
+  allowChat Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  viewers LivestreamViewer[]
+
+  @@index([hostId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdAt])
+}
+
+// --------------------------------------------
+// LIVESTREAM VIEWERS
+// --------------------------------------------
+
+model LivestreamViewer {
+  id       String     @id @default(cuid())
+  streamId String
+  stream   Livestream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
+  // User (optional - supports anonymous viewers)
+  userId String?
+  user   User?  @relation("StreamViewer", fields: [userId], references: [id])
+
+  // Session tracking
+  sessionId String
+
+  // Timing
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+  watchTime Int       @default(0)
+
+  // Engagement
+  chatMessages Int @default(0)
+
+  @@unique([streamId, sessionId])
+  @@index([streamId])
+  @@index([userId])
+}
+
+// --------------------------------------------
+// STREAM DESTINATIONS (User's saved platforms)
+// --------------------------------------------
+
+model StreamDestination {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("UserDestinations", fields: [userId], references: [id])
+
+  // Platform info
+  platform String
+  name     String
+
+  // RTMP credentials
+  rtmpUrl   String?
+  streamKey String?
+
+  // Platform-specific metadata
+  metadata Json?
+
+  // Status
+  isDefault Boolean   @default(false)
+  isActive  Boolean   @default(true)
+  lastUsed  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([platform])
+}

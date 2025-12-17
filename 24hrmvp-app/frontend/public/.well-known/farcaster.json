@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjAsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIn0",
+    "payload": "eyJkb21haW4iOiIyNGhybXZwLnh5eiJ9",
+    "signature": "PLACEHOLDER_WILL_UPDATE"
+  },
+  "frame": {
+    "version": "1",
+    "name": "24HRMVP",
+    "iconUrl": "https://24hrmvp.xyz/icon-512.png",
+    "homeUrl": "https://24hrmvp.xyz",
+    "imageUrl": "https://24hrmvp.xyz/og-image.png",
+    "buttonTitle": "🚀 Launch App",
+    "splashImageUrl": "https://24hrmvp.xyz/splash.png",
+    "splashBackgroundColor": "#0B192A",
+    "webhookUrl": "https://24hrmvp.xyz/api/webhook"
+  }
+}

@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --chrome-gradient: linear-gradient(135deg, #A8A9AD 0%, #B4B5B8 20%, #C0C0C3 40%, #CBCCCD 60%, #D7D7D8 80%, #E3E3E3 100%);
+    --chrome-reflective: linear-gradient(180deg, #4B505A 0%, #B0C4DE 25%, #D1E1F6 50%, #CCCCCC 75%, #D8D8D8 100%);
+
+    --neon-cyan: #04D9FF;
+    --neon-blue: #1F51FF;
+    --electric-cyan: #00FEFC;
+    --tron-blue: #7DFDFE;
+    --neon-purple: #8A00C4;
+    --neon-pink: #FB48C4;
+    --neon-orange: #FF5C00;
+
+    --bg-deepest: #0B192A;
+    --bg-primary: #1E1E1E;
+    --surface-1: #2E2E2E;
+
+    --text-primary: #FAFAFA;
+    --text-secondary: #B0B0B0;
+    --text-tertiary: #808080;
+  }
+
+  body {
+    @apply font-body bg-bg-deepest text-text-primary min-h-screen overflow-x-hidden;
+  }
+
+  /* Laser Grid Background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image: 
+      linear-gradient(rgba(4, 217, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(4, 217, 255, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+}
+
+@layer utilities {
+  .chrome-text {
+    @apply font-display font-black tracking-tight;
+    /* Simplified text gradient for reliability */
+    color: #FAFAFA; 
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    background: var(--bg-primary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--neon-cyan), var(--neon-purple));
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(4, 217, 255, 0.5);
+  }
+}

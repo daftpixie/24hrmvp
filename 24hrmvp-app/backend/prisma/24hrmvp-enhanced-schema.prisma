@@ -1,0 +1,258 @@
+// ENHANCED SCHEMA ADDITIONS FOR COMPREHENSIVE IDEA SUBMISSIONS AND VOTE PURCHASING
+// Add these models/enums to existing schema.prisma
+
+// ============================================
+// ENHANCED IDEA SPECIFICATIONS
+// ============================================
+
+// Add to existing Idea model:
+model Idea {
+  id          String @id @default(cuid())
+  title       String
+  description String @db.Text
+  category    String
+  complexity  String
+
+  // EXISTING FIELDS
+  tags        String[]
+  attachments String[] // Keep for backward compatibility
+  
+  // NEW COMPREHENSIVE SPECIFICATION FIELDS
+  targetAudience    String?    @db.Text  // Who will use this?
+  coreFeatures      String[]               // Array of core features
+  technicalRequirements String? @db.Text   // Tech stack, APIs, dependencies
+  expectedTimeline  String?                // Development timeline estimate
+  successMetrics    String?    @db.Text   // How to measure success
+  
+  // NEW FILE ATTACHMENT METADATA
+  fileAttachments   Json?      // Structured file metadata: [{filename, url, type, size, uploadedAt}]
+  fileCount         Int        @default(0)
+  
+  // ENHANCED METADATA
+  isPremiumBoosted  Boolean    @default(false)
+  boostLevel        Int        @default(0)  // 0=none, 1=basic, 2=featured, 3=premium
+  boostExpiresAt    DateTime?
+  
+  // ... rest of existing Idea fields
+  status String @default("pending")
+  voteCount  Int @default(0)
+  voteWeight Int @default(0)
+  
+  submittedBy User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  
+  votingCycle   VotingCycle @relation("CycleIdeas", fields: [votingCycleId], references: [id])
+  votingCycleId String
+  
+  wonCycle VotingCycle? @relation("CycleWinner")
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastSeenAt    DateTime?
+  approvedAt    DateTime?
+  implementedAt DateTime?
+  
+  votes      Vote[]
+  comments   Comment[]
+  mvpProject MVPProject?
+  forumPosts ForumPost[] @relation("IdeaDiscussions")
+  
+  @@index([votingCycleId])
+  @@index([userId])
+  @@index([status])
+  @@index([voteCount(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([category])
+  @@index([isPremiumBoosted])
+}
+
+// ============================================
+// VOTE CREDITS & PURCHASING SYSTEM
+// ============================================
+
+enum VoteCreditSource {
+  FREE_DAILY           // Base allocation
+  PURCHASED_STRIPE     // Bought with fiat
+  PURCHASED_CRYPTO     // Bought with USDC on Base
+  PURCHASED_POINTS     // Bought with platform points
+  EARNED_REWARD        // Earned through activity
+  ADMIN_GRANT          // Admin-granted
+}
+
+enum VotePurchaseStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// Track user's available vote credits
+model VoteCredit {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Credit details
+  amount        Int                // Number of vote credits
+  source        VoteCreditSource
+  description   String?
+  
+  // Purchase tracking (if applicable)
+  purchaseId    String?  @unique
+  purchase      VotePurchase? @relation(fields: [purchaseId], references: [id])
+  
+  // Expiration
+  expiresAt     DateTime?
+  isExpired     Boolean   @default(false)
+  
+  // Usage tracking
+  consumed      Int       @default(0)  // How many used
+  remaining     Int                    // Calculated: amount - consumed
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([userId, isExpired])
+  @@index([expiresAt])
+}
+
+// Track vote purchases
+model VotePurchase {
+  id              String              @id @default(cuid())
+  userId          String
+  user            User                @relation(fields: [userId], references: [id])
+  
+  // Purchase details
+  voteCredits     Int                 // Number of votes purchased
+  amount          Decimal             @db.Decimal(12, 2)  // Price paid
+  currency        String              // usd, usdc, points
+  paymentMethod   String              // stripe, coinbase, points
+  
+  // Payment tracking
+  status          VotePurchaseStatus  @default(PENDING)
+  paymentId       String?   @unique   // Stripe payment intent ID or transaction hash
+  metadata        Json?                // Payment-specific metadata
+  
+  // Credits relationship
+  credits         VoteCredit[]
+  
+  // Timestamps
+  purchasedAt     DateTime?
+  completedAt     DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId, status])
+  @@index([paymentId])
+}
+
+// Track individual vote consumption from credits
+model VoteConsumption {
+  id            String   @id @default(cuid())
+  
+  vote          Vote     @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  voteId        String   @unique
+  
+  creditId      String?  // Which credit pool was used (null for free votes)
+  creditSource  VoteCreditSource @default(FREE_DAILY)
+  
+  createdAt     DateTime @default(now())
+  
+  @@index([creditId])
+}
+
+// ============================================
+// ENHANCED PAYMENT TRACKING
+// ============================================
+
+// Extend existing Payment model with vote-specific fields
+model Payment {
+  id           String  @id @default(cuid())
+  userId       String
+  amount       Decimal @db.Decimal(12, 2)
+  currency     String  @default("usd")
+  status       String  @default("pending")
+  provider     String  // "stripe", "coinbase", "points"
+  providerTxId String? @unique
+  metadata     Json?
+  
+  // NEW: Link to vote purchase if applicable
+  votePurchaseId String? @unique
+  votePurchase   VotePurchase? @relation(fields: [votePurchaseId], references: [id])
+  
+  // NEW: Enhanced metadata
+  itemType      String?  // "vote_credits", "boost", "membership"
+  itemQuantity  Int?     // Number of items purchased
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+  @@index([providerTxId])
+  @@index([itemType])
+}
+
+// ============================================
+// ADD TO EXISTING USER MODEL
+// ============================================
+
+// Add these relations to existing User model:
+model User {
+  // ... existing fields ...
+  
+  // NEW RELATIONS
+  voteCredits    VoteCredit[]
+  votePurchases  VotePurchase[]
+  
+  // ... rest of existing relations ...
+}
+
+// ============================================
+// ADD TO EXISTING VOTE MODEL
+// ============================================
+
+// Add this relation to existing Vote model:
+model Vote {
+  // ... existing fields ...
+  
+  // NEW RELATION
+  consumption VoteConsumption?
+  
+  // ... rest of existing fields ...
+}
+
+// ============================================
+// PRICING CONFIGURATION (Stored in DB)
+// ============================================
+
+model VotePricing {
+  id          String   @id @default(cuid())
+  
+  // Package details
+  packageName String   @unique  // "single", "pack_5", "pack_20", "pack_100"
+  voteCount   Int                // Number of votes in package
+  
+  // Pricing by currency
+  priceUsd    Decimal  @db.Decimal(12, 2)
+  priceUsdc   Decimal  @db.Decimal(12, 2)
+  pricePoints Int
+  
+  // Stripe product IDs
+  stripePriceId String?
+  
+  // Display
+  displayName String
+  description String?
+  isActive    Boolean  @default(true)
+  isPopular   Boolean  @default(false)
+  
+  // Metadata
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([isActive, sortOrder])
+}
