@@ -1,26 +1,27 @@
 24HRMVP: Help Other People Excel 🚀
 
-<img width="358" height="609" alt="image" src="https://github.com/user-attachments/assets/2b7fcb15-e583-48fc-8b86-2280f6d560d6" />
-<img width="366" height="603" alt="image" src="https://github.com/user-attachments/assets/36689508-1287-431b-bcac-8d650dc34fe9" />
-<img width="369" height="603" alt="image" src="https://github.com/user-attachments/assets/9698703e-232e-4e13-a6c1-5909e0908486" />
-
+<img width="1105" height="873" alt="image" src="https://github.com/user-attachments/assets/48f28513-71ec-4de3-ad41-da5c839f1ab9" />
+<img width="1073" height="912" alt="image" src="https://github.com/user-attachments/assets/e9b1052a-e470-4374-b879-b7228126ca58" />
+<img width="1048" height="908" alt="image" src="https://github.com/user-attachments/assets/b97624fa-9c46-4678-9624-0c97c40e97d1" />
 
 Where Community Ideas Become Reality in 24 Hours
-Launch App · Submit an Idea · Join the Movement · Read the Docs
+
+Launch App · Submit an Idea · Join the Movement
 
 🌟 The H.O.P.E. Campaign: Help Other People Excel
 
-HOPE—Help Other People Excel emerged is the guiding principle of our mission. This isn't just a platform — it's a movement to democratize innovation and prove that technology, built ethically and openly, empowers rather than replaces people.
+HOPE - Help Other People Excel emerged is the guiding principle of our mission. This isn't just a platform  -  it's a movement to democratize innovation and prove that technology, built ethically and openly, empowers rather than replaces people.
 
 Our Core Belief
 
 AI is a force multiplier for human potential, not a replacement for human creativity.
 
-We're building technology that puts Main Street first, using open source and ethical AI to create real, positive impact. 24HRMVP showcases how collaborative innovation helps everyone rise—not through automation that displaces workers, but through tools that amplify human ingenuity.
+We're building technology that puts Main Street first, using open source and ethical AI to create real, positive impact. 24HRMVP showcases how collaborative innovation helps everyone rise - not through automation that displaces workers, but through tools that amplify human ingenuity.
 
 🎯 What is 24HRMVP?
 
-24HRMVP is a Farcaster Mini App that transforms community-driven software ideas into production-ready MVPs within 24 hours. It's democracy meets development—where the best ideas rise to the top through transparent voting, and expert human-led sprints (enhanced by AI) turn concepts into code.
+24HRMVP is a Web3 ecosystem that transforms community-driven software ideas into production-ready MVPs within 24 hours. It's democracy meets development - where the best ideas rise to the top through transparent voting, and expert human-led sprints (enhanced by AI) turn concepts into code.
+
 The Vision
 
 Community-Powered Innovation: Submit ideas, vote on favorites, watch them come to life
@@ -40,8 +41,6 @@ How It Works
 🗳️ Democratic Voting System
 
 Weekly voting cycles with transparent, blockchain-verifiable results
-Weighted voting based on account age, contribution history, and reputation
-Anti-manipulation measures including rate limiting and fraud detection
 Real-time updates via WebSocket for live leaderboard changes
 
 🏆 Gamification & Community
@@ -53,7 +52,7 @@ Social proof mechanisms to showcase community champions
 
 💰 Fair Economics
 
-Multiple submission tiers: Free, Standard ($1), Priority ($5), Premium ($20) (Examples)
+Multiple voing pathways: Daily free, paid boosts, or achievement reward points
 No KYC requirements: Frictionless onboarding
 Revenue sharing: Community rewards for top contributors
 
@@ -61,7 +60,6 @@ Revenue sharing: Community rewards for top contributors
 
 Human-led development: AI assists, humans architect and validate
 Transparent decision logging: Every AI action is auditable
-Privacy-first: Your data, your control
 
 🎨 Liquid Chrome Aesthetic
 
@@ -73,9 +71,9 @@ Accessibility-first: WCAG AA compliant, reduced motion support
 
 For Community Members
 
-Connect Wallet: Authenticate with your Farcaster account
-Submit Ideas: Propose your software concept (free or paid tiers)
-Vote Weekly: Support the ideas you believe in
+Connect Wallet: Authenticate with your favorite wallet
+Submit Ideas: Propose your software concept (free or pay for votes)
+Vote Daily: Support the ideas you believe in
 Earn Rewards: Build reputation, unlock achievements, earn virtual currency
 Track Progress: Watch your idea transform into reality
 
@@ -84,9 +82,10 @@ Track Progress: Watch your idea transform into reality
 Why 24HRMVP Exists
 
 In a world where AI anxiety is rising and job displacement fears are real, we're proving a different path is possible. Technology should augment human creativity, not replace it.
+
 24HRMVP is our answer to the question: "What if AI made us more capable, more connected, and more empowered to build the future we want to see?"
 
-The H.O.P.E. Principles
+The H.O.P.E. Principles - Help Other Pople Excel
 
 Human-Centric Design: People first, technology second
 Open & Transparent: No black boxes, no hidden agendas
