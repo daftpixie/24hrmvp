@@ -3,7 +3,7 @@
 /**
  * ThreadedDiscussion Component for 24HRMVP
  * 
- * @version 5.0.0
+ * @version 5.1.0 - Fixed Button import casing
  */
 
 import React, { useMemo, useState } from 'react';
@@ -14,7 +14,8 @@ import {
 import type { ForumComment } from '@/lib/types/grid';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+// FIXED: Using consistent casing - Button.tsx with capital B
+import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/textarea';
 import {
   ArrowBigDown,

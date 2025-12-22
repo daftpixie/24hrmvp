@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Card Component for 24HRMVP
+ * 
+ * @version 5.1.0 - Added named export for backward compatibility
+ */
+
 import { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 
@@ -9,7 +15,7 @@ interface CardProps {
   hoverable?: boolean;
 }
 
-export default function Card({ children, className = '', hoverable = true }: CardProps) {
+function Card({ children, className = '', hoverable = true }: CardProps) {
   return (
     <motion.div
       className={`
@@ -29,3 +35,9 @@ export default function Card({ children, className = '', hoverable = true }: Car
     </motion.div>
   );
 }
+
+// Named export for backward compatibility
+export { Card };
+
+// Default export
+export default Card;

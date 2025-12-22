@@ -1,11 +1,12 @@
-﻿'use client';
+'use client';
 
 // ============================================
 // 24HRMVP - GRID SOCIAL PAGE
 // File: frontend/app/grid/social/page.tsx
 // ============================================
 
-import { SocialWall } from '@/components/grid/SocialWall';
+// FIXED: Changed to default import since SocialWall uses default export
+import SocialWall from '@/components/grid/SocialWall';
 import ClientOnly from '@/components/ClientOnly';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 

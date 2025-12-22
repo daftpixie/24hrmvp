@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Input Component for 24HRMVP
+ * 
+ * @version 5.1.0 - Added named export for backward compatibility
+ */
+
 import { InputHTMLAttributes } from 'react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -7,7 +13,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 
-export default function Input({ label, error, className = '', ...props }: InputProps) {
+function Input({ label, error, className = '', ...props }: InputProps) {
   return (
     <div className="relative">
       {label && (
@@ -35,3 +41,9 @@ export default function Input({ label, error, className = '', ...props }: InputP
     </div>
   );
 }
+
+// Named export for backward compatibility
+export { Input };
+
+// Default export
+export default Input;
