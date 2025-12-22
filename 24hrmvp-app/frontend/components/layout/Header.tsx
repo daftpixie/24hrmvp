@@ -6,7 +6,7 @@
  * Features dynamic navigation that shows Profile link only when authenticated.
  * Uses the Liquid Chrome Futuristic Design System with Tron-inspired aesthetics.
  * 
- * @version 2.1.0 - Added 'use client' directive for Next.js App Router compatibility
+ * @version 2.3.0 - Brand alignment: Logo equality & Uppercase Bold Orbitron Menu
  * @brand 24HRMVP Liquid Chrome Design System
  */
 
@@ -46,52 +46,50 @@ export default function Header() {
     : baseNavLinks;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0B192A]/80 backdrop-blur-xl">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* Logo - Chrome gradient text effect */}
-        <Link 
-          href="/" 
-          className="flex items-center space-x-2 transition-transform hover:scale-105"
-        >
-          <div className="chrome-text text-2xl font-black tracking-tight">
-            24HR<span className="text-[#04D9FF]">MVP</span>
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0B192A]/90 backdrop-blur-xl transition-all duration-300">
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 h-20 flex items-center justify-between">
+        
+        {/* Logo Section */}
+        <Link href="/" className="flex items-center gap-1 group">
+          <div className="relative flex items-center font-display font-black text-2xl tracking-tighter">
+            <span className="bg-gradient-to-br from-white via-gray-200 to-gray-400 bg-clip-text text-transparent group-hover:text-white transition-colors">
+              24HR
+            </span>
+            <span className="text-neon-cyan group-hover:text-neon-cyan/80 transition-colors shadow-neon-glow ml-0.5">
+              MVP
+            </span>
+            
+            {/* Animated Underline on Hover */}
+            <div className="absolute -bottom-2 left-0 w-0 h-[2px] bg-neon-cyan group-hover:w-full transition-all duration-300 ease-out" />
           </div>
         </Link>
 
-        {/* Navigation - Hidden on mobile, flex on md+ */}
-        <nav className="hidden md:flex items-center space-x-6">
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => {
-            const isActive = pathname === link.href || 
-              (link.href !== '/' && pathname.startsWith(link.href));
+            const isActive = pathname === link.href || (link.href !== '/' && pathname?.startsWith(link.href));
             
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`
-                  nav-link relative px-3 py-2 text-sm font-medium
-                  transition-all duration-200 ease-out
-                  ${isActive 
-                    ? 'text-[#04D9FF]' 
-                    : 'text-gray-300 hover:text-[#04D9FF]'
-                  }
-                `}
+                className={`relative px-5 py-2.5 rounded-lg font-display font-bold text-lg uppercase tracking-wide transition-all duration-300 ${
+                  isActive 
+                    ? 'text-white bg-white/5 shadow-[0_0_15px_rgba(255,255,255,0.05)]' 
+                    : 'text-text-secondary hover:text-white hover:bg-white/5 hover:text-neon-cyan'
+                }`}
               >
                 {link.label}
-                {/* Active indicator line */}
                 {isActive && (
-                  <span 
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4/5 h-0.5 
-                               bg-[#04D9FF] shadow-[0_0_10px_#04D9FF]"
-                  />
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-[2px] bg-gradient-to-r from-transparent via-neon-cyan to-transparent shadow-[0_0_8px_rgba(4,217,255,0.8)]" />
                 )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Auth Button - Always visible */}
-        <div className="flex items-center">
+        {/* Auth Button */}
+        <div className="flex items-center gap-4">
           <AuthButton />
         </div>
       </div>

@@ -1,101 +1,54 @@
-// ============================================
-// 24HRMVP - AUTH PROVIDER (PRODUCTION READY)
-// File: frontend/providers/AuthProvider.tsx
-// FIXED: Added walletAddress to User type
-// FIXED: Export getToken helper function
-// FIXED: Export isLoading in context type
-// ============================================
+/**
+ * Unified Auth Provider - Complete Authentication Solution
+ * 
+ * @version 6.0.0 - Unified wallet + auth flow
+ * 
+ * This provider:
+ * - Manages authentication state across the entire app
+ * - Integrates with RainbowKit wallet connection
+ * - Handles SIWE (Sign-In with Ethereum) flow automatically
+ * - Uses unified token storage
+ */
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { 
+  createContext, 
+  useContext, 
+  useState, 
+  useEffect, 
+  useCallback, 
+  type ReactNode 
+} from 'react';
+import { useAccount, useSignMessage, useDisconnect } from 'wagmi';
 import { getApiUrl } from '@/lib/config';
+import {
+  setTokens,
+  getAccessToken,
+  clearTokens,
+  setUser,
+  getUser,
+  hasValidTokens,
+  getAuthHeaders,
+  migrateLegacyTokens,
+  type StoredUser,
+} from '@/lib/auth/token-store';
 
 // ============================================
 // TYPES
 // ============================================
 
-export interface User {
-  id: string;
-  fid: number;
-  username: string;
-  displayName: string | null;
-  pfpUrl: string | null;
-  custodyAddress: string | null;
-  walletAddress: string | null; // Added for wallet auth
-  membershipTier: string;
-  points: number;
-  createdAt: string;
-}
+export interface User extends StoredUser {}
 
 export interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isConnecting: boolean;
   error: string | null;
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
+  signIn: () => Promise<void>;
+  signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
-}
-
-// ============================================
-// TOKEN STORAGE KEY
-// ============================================
-
-const TOKEN_KEY = 'jwt_token';
-const USER_KEY = 'user_data';
-
-// ============================================
-// TOKEN HELPER FUNCTIONS (Exported)
-// ============================================
-
-/**
- * Get the current JWT token from storage
- * @returns The JWT token or null if not found
- */
-export function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return sessionStorage.getItem(TOKEN_KEY);
-}
-
-/**
- * Set the JWT token in storage
- * @param token The JWT token to store
- */
-export function setToken(token: string): void {
-  if (typeof window === 'undefined') return;
-  sessionStorage.setItem(TOKEN_KEY, token);
-}
-
-/**
- * Remove the JWT token from storage
- */
-export function removeToken(): void {
-  if (typeof window === 'undefined') return;
-  sessionStorage.removeItem(TOKEN_KEY);
-  sessionStorage.removeItem(USER_KEY);
-}
-
-/**
- * Get cached user data from storage
- */
-export function getCachedUser(): User | null {
-  if (typeof window === 'undefined') return null;
-  const userData = sessionStorage.getItem(USER_KEY);
-  if (!userData) return null;
-  try {
-    return JSON.parse(userData);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Cache user data in storage
- */
-export function setCachedUser(user: User): void {
-  if (typeof window === 'undefined') return;
-  sessionStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 // ============================================
@@ -105,7 +58,7 @@ export function setCachedUser(user: User): void {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // ============================================
-// PROVIDER COMPONENT
+// PROVIDER
 // ============================================
 
 interface AuthProviderProps {
@@ -113,135 +66,251 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [siweMessage, setSiweMessage] = useState<string | null>(null);
+
+  // Wagmi hooks
+  const { address, isConnected, chain } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const { disconnect } = useDisconnect();
 
   // ============================================
-  // FETCH CURRENT USER
+  // FETCH USER FROM BACKEND
   // ============================================
 
-  const fetchUser = useCallback(async () => {
+  const fetchUser = useCallback(async (): Promise<User | null> => {
+    const token = getAccessToken();
+    if (!token) return null;
+
     try {
-      const token = getToken();
-      if (!token) {
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
-
       const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/api/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          removeToken();
-          setUser(null);
-          return;
+          clearTokens();
+          return null;
         }
         throw new Error('Failed to fetch user');
       }
 
       const data = await response.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        setCachedUser(data.user);
-      } else if (data.user) {
-        setUser(data.user);
-        setCachedUser(data.user);
-      } else {
-        setUser(null);
+      const userData = data.user || data;
+      
+      if (userData?.id) {
+        setUser(userData);
+        return userData;
       }
+      
+      return null;
     } catch (err) {
-      console.error('Error fetching user:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch user');
-      // Try to use cached user on error
-      const cachedUser = getCachedUser();
-      if (cachedUser) {
-        setUser(cachedUser);
-      }
-    } finally {
-      setIsLoading(false);
+      console.error('[AuthProvider] fetchUser error:', err);
+      return null;
     }
   }, []);
 
   // ============================================
-  // INITIALIZE AUTH
+  // SIWE AUTHENTICATION FLOW
   // ============================================
 
-  useEffect(() => {
-    // Try to load cached user first for faster initial render
-    const cachedUser = getCachedUser();
-    if (cachedUser) {
-      setUser(cachedUser);
+  const requestNonce = useCallback(async (walletAddress: string, chainId: number) => {
+    const apiUrl = getApiUrl();
+    const params = new URLSearchParams({
+      address: walletAddress,
+      chainId: chainId.toString(),
+    });
+
+    const response = await fetch(`${apiUrl}/api/auth/wallet/nonce?${params}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get nonce');
     }
+
+    return response.json();
+  }, []);
+
+  const verifySiweSignature = useCallback(async (message: string, signature: string) => {
+    const apiUrl = getApiUrl();
     
-    // Then verify with server
-    fetchUser();
-  }, [fetchUser]);
+    const response = await fetch(`${apiUrl}/api/auth/wallet/verify/siwe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ message, signature }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error?.message || 'Verification failed');
+    }
+
+    return response.json();
+  }, []);
 
   // ============================================
-  // LOGIN HANDLER
+  // SIGN IN WITH CONNECTED WALLET
   // ============================================
 
-  const login = useCallback(async () => {
+  const signIn = useCallback(async () => {
+    if (!address || !chain) {
+      setError('Please connect your wallet first');
+      return;
+    }
+
+    setIsConnecting(true);
     setError(null);
-    setIsLoading(true);
-    
+
     try {
-      // This will be called after Farcaster Quick Auth completes
-      // The token should already be set by the auth callback
-      await fetchUser();
+      // Step 1: Get nonce and message from backend
+      console.log('[AuthProvider] Requesting nonce for', address.substring(0, 10) + '...');
+      const nonceResponse = await requestNonce(address, chain.id);
+      
+      if (!nonceResponse.success || !nonceResponse.message) {
+        throw new Error('Failed to get signing message');
+      }
+
+      setSiweMessage(nonceResponse.message);
+
+      // Step 2: Sign the message with wallet
+      console.log('[AuthProvider] Requesting signature...');
+      const signature = await signMessageAsync({
+        message: nonceResponse.message,
+      });
+
+      // Step 3: Verify signature with backend
+      console.log('[AuthProvider] Verifying signature...');
+      const authResponse = await verifySiweSignature(nonceResponse.message, signature);
+
+      if (!authResponse.success) {
+        throw new Error(authResponse.error?.message || 'Authentication failed');
+      }
+
+      // Step 4: Store tokens and user
+      if (authResponse.accessToken && authResponse.refreshToken && authResponse.expiresAt) {
+        setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
+      }
+
+      if (authResponse.user) {
+        setUser(authResponse.user);
+        setUserState(authResponse.user);
+      }
+
+      console.log('[AuthProvider] Sign in successful');
+      setSiweMessage(null);
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err instanceof Error ? err.message : 'Login failed');
-      throw err;
+      console.error('[AuthProvider] Sign in error:', err);
+      const message = err instanceof Error ? err.message : 'Sign in failed';
+      setError(message);
+      setSiweMessage(null);
     } finally {
-      setIsLoading(false);
+      setIsConnecting(false);
     }
-  }, [fetchUser]);
+  }, [address, chain, requestNonce, signMessageAsync, verifySiweSignature]);
 
   // ============================================
-  // LOGOUT HANDLER
+  // SIGN OUT
   // ============================================
 
-  const logout = useCallback(async () => {
-    setError(null);
-    
+  const signOut = useCallback(async () => {
     try {
-      const token = getToken();
+      // Call logout endpoint if we have a token
+      const token = getAccessToken();
       if (token) {
         const apiUrl = getApiUrl();
         await fetch(`${apiUrl}/api/auth/logout`, {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(),
           credentials: 'include',
-        }).catch(() => {
-          // Ignore logout API errors
-        });
+        }).catch(() => {});
       }
     } finally {
-      removeToken();
-      setUser(null);
+      // Clear all auth state
+      clearTokens();
+      setUserState(null);
+      setError(null);
+      
+      // Disconnect wallet
+      disconnect();
     }
-  }, []);
+  }, [disconnect]);
 
   // ============================================
   // REFRESH USER
   // ============================================
 
   const refreshUser = useCallback(async () => {
-    await fetchUser();
+    const userData = await fetchUser();
+    setUserState(userData);
   }, [fetchUser]);
+
+  // ============================================
+  // INITIALIZATION
+  // ============================================
+
+  useEffect(() => {
+    const initialize = async () => {
+      // Migrate any legacy tokens first
+      migrateLegacyTokens();
+
+      // Try to restore session from cached user
+      const cachedUser = getUser();
+      if (cachedUser) {
+        setUserState(cachedUser);
+      }
+
+      // Verify session with backend
+      if (hasValidTokens()) {
+        const userData = await fetchUser();
+        setUserState(userData);
+      } else {
+        // Clear any invalid state
+        if (!getAccessToken()) {
+          setUserState(null);
+        }
+      }
+
+      setIsLoading(false);
+    };
+
+    initialize();
+  }, [fetchUser]);
+
+  // ============================================
+  // AUTO-SIGN IN ON WALLET CONNECT
+  // ============================================
+
+  useEffect(() => {
+    // When wallet connects and we don't have a valid session, trigger sign in
+    if (isConnected && address && !isLoading && !user && !isConnecting) {
+      // Check if we should auto-sign in (only if we don't have valid tokens)
+      if (!hasValidTokens()) {
+        // Don't auto-sign in - let user click the button
+        // This prevents unwanted signature requests
+      }
+    }
+  }, [isConnected, address, isLoading, user, isConnecting]);
+
+  // ============================================
+  // HANDLE WALLET DISCONNECT
+  // ============================================
+
+  useEffect(() => {
+    // If wallet disconnects, clear auth state
+    if (!isConnected && user) {
+      console.log('[AuthProvider] Wallet disconnected, clearing auth');
+      clearTokens();
+      setUserState(null);
+    }
+  }, [isConnected, user]);
 
   // ============================================
   // CONTEXT VALUE
@@ -250,10 +319,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value: AuthContextType = {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && hasValidTokens(),
+    isConnecting,
     error,
-    login,
-    logout,
+    signIn,
+    signOut,
     refreshUser,
   };
 
@@ -277,7 +347,13 @@ export function useAuth(): AuthContextType {
 }
 
 // ============================================
-// DEFAULT EXPORT
+// RE-EXPORTS FOR BACKWARD COMPATIBILITY
 // ============================================
+
+export { 
+  getAccessToken as getToken, 
+  setTokens as setToken,
+  clearTokens as removeToken,
+} from '@/lib/auth/token-store';
 
 export default AuthProvider;

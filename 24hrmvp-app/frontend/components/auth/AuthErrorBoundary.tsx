@@ -1,14 +1,14 @@
-'use client';
-
 /**
  * AuthErrorBoundary - Error boundary for authentication components
  * 
  * Catches runtime errors from wallet SDK initialization (e.g., Family SDK)
  * and provides graceful recovery instead of crashing the app.
  * 
- * @version 1.0.0
+ * @version 6.0.0
  * @brand 24HRMVP Liquid Chrome Design System
  */
+
+'use client';
 
 import React, { Component, ReactNode } from 'react';
 
@@ -34,15 +34,18 @@ export class AuthErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
-    // Check if this is a Family SDK error we can recover from
-    const isFamilyError = error.message?.includes('Family Accounts is not connected');
+    // Check if this is a recoverable wallet error
+    const isWalletError = 
+      error.message?.includes('Family Accounts is not connected') ||
+      error.message?.includes('WalletConnect') ||
+      error.message?.includes('wagmi');
     
-    if (isFamilyError) {
-      console.warn('[AuthErrorBoundary] Caught Family SDK error, will attempt recovery');
+    if (isWalletError) {
+      console.warn('[AuthErrorBoundary] Caught wallet SDK error, will attempt recovery');
       return { 
         hasError: true, 
         error,
-        errorInfo: 'Wallet SDK initialization error. Attempting to recover...'
+        errorInfo: 'Wallet connection interrupted. Attempting to recover...'
       };
     }
 
@@ -57,10 +60,12 @@ export class AuthErrorBoundary extends Component<Props, State> {
     console.error('[AuthErrorBoundary] Error caught:', error);
     console.error('[AuthErrorBoundary] Component stack:', errorInfo.componentStack);
     
-    // Check if this is a recoverable Family SDK error
-    const isFamilyError = error.message?.includes('Family Accounts is not connected');
+    // Check if this is a recoverable error
+    const isRecoverable = 
+      error.message?.includes('Family Accounts') ||
+      error.message?.includes('WalletConnect');
     
-    if (isFamilyError) {
+    if (isRecoverable) {
       // Attempt recovery after a short delay
       setTimeout(() => {
         this.setState({ hasError: false, error: null, errorInfo: '' });
@@ -82,11 +87,11 @@ export class AuthErrorBoundary extends Component<Props, State> {
       // Default error UI with brand styling
       return (
         <div className="min-h-[200px] flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-surface-1 border border-white/10 rounded-xl p-6 text-center">
+          <div className="max-w-md w-full bg-[#1E1E1E] border border-white/10 rounded-xl p-6 text-center">
             {/* Icon */}
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-neon-orange/10 flex items-center justify-center">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#FF5C00]/10 flex items-center justify-center">
               <svg 
-                className="w-6 h-6 text-neon-orange" 
+                className="w-6 h-6 text-[#FF5C00]" 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -101,20 +106,20 @@ export class AuthErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Title */}
-            <h3 className="text-lg font-heading font-bold text-text-primary mb-2">
+            <h3 className="text-lg font-bold text-[#FAFAFA] mb-2">
               Connection Interrupted
             </h3>
 
             {/* Message */}
-            <p className="text-sm text-text-secondary mb-4">
+            <p className="text-sm text-[#808080] mb-4">
               {this.state.errorInfo || 'The wallet connection encountered an issue. This usually resolves automatically.'}
             </p>
 
             {/* Retry Button */}
             <button
               onClick={this.handleRetry}
-              className="px-4 py-2 bg-neon-cyan/10 border border-neon-cyan text-neon-cyan 
-                         rounded-lg text-sm font-medium hover:bg-neon-cyan/20 
+              className="px-4 py-2 bg-[#04D9FF]/10 border border-[#04D9FF] text-[#04D9FF] 
+                         rounded-lg text-sm font-medium hover:bg-[#04D9FF]/20 
                          transition-colors duration-200"
             >
               Try Again
@@ -122,8 +127,8 @@ export class AuthErrorBoundary extends Component<Props, State> {
 
             {/* Loading indicator if auto-recovering */}
             {this.state.error?.message?.includes('Family Accounts') && (
-              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-text-tertiary">
-                <div className="w-3 h-3 border-2 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin" />
+              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#808080]">
+                <div className="w-3 h-3 border-2 border-[#04D9FF]/30 border-t-[#04D9FF] rounded-full animate-spin" />
                 Auto-recovering...
               </div>
             )}

@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic'
 // ============================================
 // 24HRMVP - GRID OVERVIEW PAGE
 // File: frontend/app/grid/page.tsx
-// NOTE: Header and GridHeader are in app/grid/layout.tsx
 // ============================================
 
 import { useState, useEffect } from 'react';
@@ -18,9 +17,9 @@ import {
   MessageCircle, 
   MessageSquare, 
   Users, 
-  Trophy,
-  Radio,
-  Activity,
+  Trophy, 
+  Radio, 
+  Activity, 
   Zap,
   ArrowRight
 } from 'lucide-react';
@@ -72,7 +71,8 @@ function GridOverviewContent() {
       description: 'Real-time conversations with the community',
       icon: MessageCircle,
       href: '/grid/chat',
-      color: 'from-cyan-500 to-blue-500',
+      color: 'text-neon-cyan',
+      borderColor: 'group-hover:border-neon-cyan/50',
       stat: `${stats.chatRooms} rooms`,
     },
     {
@@ -81,7 +81,8 @@ function GridOverviewContent() {
       description: 'Discuss ideas and share knowledge',
       icon: MessageSquare,
       href: '/grid/forum',
-      color: 'from-purple-500 to-pink-500',
+      color: 'text-neon-purple',
+      borderColor: 'group-hover:border-neon-purple/50',
       stat: `${stats.forumPosts} posts`,
     },
     {
@@ -90,7 +91,8 @@ function GridOverviewContent() {
       description: 'Follow community activity and updates',
       icon: Users,
       href: '/grid/social',
-      color: 'from-green-500 to-emerald-500',
+      color: 'text-green-400',
+      borderColor: 'group-hover:border-green-400/50',
       stat: 'Coming soon',
     },
     {
@@ -99,7 +101,8 @@ function GridOverviewContent() {
       description: 'Top contributors and builders',
       icon: Trophy,
       href: '/grid/leaderboard',
-      color: 'from-yellow-500 to-orange-500',
+      color: 'text-yellow-400',
+      borderColor: 'group-hover:border-yellow-400/50',
       stat: 'View rankings',
     },
     {
@@ -108,105 +111,110 @@ function GridOverviewContent() {
       description: 'Watch live MVP builds and events',
       icon: Radio,
       href: '/grid/live',
-      color: 'from-red-500 to-pink-500',
+      color: 'text-neon-pink',
+      borderColor: 'group-hover:border-neon-pink/50',
       stat: 'Coming soon',
     },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 py-8 space-y-10">
+      
       {/* Welcome Section */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-heading font-bold text-white mb-2">
-          Welcome to The Grid
-        </h2>
-        <p className="text-[--text-secondary] max-w-2xl">
+      <div className="space-y-4">
+        <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-wide">
+          Welcome to <span className="text-neon-cyan">The Grid</span>
+        </h1>
+        <p className="text-xl text-text-secondary max-w-2xl font-body">
           Your community hub for connecting with builders, sharing ideas, and following the 24HRMVP journey.
         </p>
       </div>
 
-      {/* Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      {/* Stats HUD */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Chat Rooms', value: stats.chatRooms, icon: MessageCircle },
-          { label: 'Active Users', value: stats.activeUsers || '—', icon: Users },
-          { label: 'Forum Posts', value: stats.forumPosts || '—', icon: MessageSquare },
-          { label: 'Messages', value: stats.totalMessages || '—', icon: Activity },
+          { label: 'Chat Rooms', value: stats.chatRooms, icon: MessageCircle, color: 'text-neon-cyan' },
+          { label: 'Active Users', value: stats.activeUsers || '—', icon: Users, color: 'text-neon-blue' },
+          { label: 'Forum Posts', value: stats.forumPosts || '—', icon: MessageSquare, color: 'text-neon-purple' },
+          { label: 'Messages', value: stats.totalMessages || '—', icon: Activity, color: 'text-neon-pink' },
         ].map((stat, i) => (
-          <div 
-            key={i}
-            className="bg-[rgba(255,255,255,0.03)] rounded-xl p-4 border border-[rgba(4,217,255,0.1)]"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-[rgba(4,217,255,0.1)] rounded-lg">
-                <stat.icon className="w-5 h-5 text-[--neon-cyan]" />
-              </div>
-              <div>
-                <p className="text-2xl font-mono font-bold text-white">{stat.value}</p>
-                <p className="text-xs text-[--text-secondary]">{stat.label}</p>
-              </div>
+          <div key={i} className="bg-surface-1/40 border border-white/5 rounded-xl p-4 flex items-center gap-4 hover:bg-surface-1/60 transition-colors group">
+            <div className={`p-3 rounded-lg bg-white/5 ${stat.color} group-hover:scale-110 transition-transform`}>
+              <stat.icon className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-2xl font-mono font-bold text-white">{stat.value}</div>
+              <div className="text-xs text-text-tertiary uppercase tracking-wider font-bold">{stat.label}</div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Feature Cards */}
+      {/* Feature Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {features.map((feature) => {
           const Icon = feature.icon;
-          
           return (
-            <Link
-              key={feature.id}
+            <Link 
+              key={feature.id} 
               href={feature.href}
-              className="group bg-[rgba(255,255,255,0.03)] rounded-2xl border border-[rgba(4,217,255,0.1)] p-6 hover:border-[rgba(4,217,255,0.3)] transition-all hover:transform hover:scale-[1.02]"
+              className={`group relative p-6 rounded-2xl bg-surface-1/40 border border-white/10 overflow-hidden transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:bg-surface-1/60 ${feature.borderColor}`}
             >
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4`}>
-                <Icon className="w-6 h-6 text-white" />
-              </div>
+              {/* Card Glow Effect */}
+              <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-transparent to-white/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-bl-full`} />
               
-              <h3 className="text-xl font-heading font-bold text-white mb-2 group-hover:text-[--neon-cyan] transition-colors">
-                {feature.title}
-              </h3>
-              
-              <p className="text-[--text-secondary] text-sm mb-4">
-                {feature.description}
-              </p>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-[--text-tertiary]">{feature.stat}</span>
-                <ArrowRight className="w-5 h-5 text-[--text-secondary] group-hover:text-[--neon-cyan] group-hover:translate-x-1 transition-all" />
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex justify-between items-start mb-4">
+                  <div className={`p-3 rounded-xl bg-white/5 ${feature.color} ring-1 ring-white/10 group-hover:ring-white/20 transition-all`}>
+                    <Icon className="w-8 h-8" />
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-text-tertiary group-hover:text-white transform group-hover:translate-x-1 transition-all" />
+                </div>
+                
+                <h3 className="text-xl font-heading font-bold text-white mb-2 group-hover:text-neon-cyan transition-colors">
+                  {feature.title}
+                </h3>
+                
+                <p className="text-text-secondary text-sm mb-6 flex-grow">
+                  {feature.description}
+                </p>
+                
+                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                  <span className={`text-xs font-mono ${feature.color}`}>
+                    {feature.stat}
+                  </span>
+                  <div className={`w-2 h-2 rounded-full ${feature.stat === 'Coming soon' ? 'bg-gray-600' : 'bg-green-500 animate-pulse'}`} />
+                </div>
               </div>
             </Link>
           );
         })}
       </div>
 
-      {/* Activity Feed Teaser */}
-      <div className="mt-8 bg-[rgba(255,255,255,0.03)] rounded-2xl border border-[rgba(4,217,255,0.1)] p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-[rgba(4,217,255,0.1)] rounded-lg">
-            <Zap className="w-5 h-5 text-[--neon-cyan]" />
-          </div>
-          <h3 className="font-heading font-bold text-white">Recent Activity</h3>
+      {/* Recent Activity Ticker */}
+      <div className="bg-surface-1/30 border border-white/10 rounded-xl p-4 flex items-center gap-4 overflow-hidden">
+        <div className="flex items-center gap-2 text-neon-cyan font-bold whitespace-nowrap px-2 border-r border-white/10">
+          <Zap className="w-4 h-4 fill-current" />
+          <span className="text-sm font-mono tracking-widest uppercase">Live Activity</span>
         </div>
-        
-        <div className="space-y-3">
-          {[
-            'New idea submitted: "AI-Powered Code Review Tool"',
-            'Voting cycle started for Week 12',
-            'MVP "Task Automator" completed and deployed',
-          ].map((activity, i) => (
-            <div 
-              key={i}
-              className="flex items-center gap-3 p-3 bg-[rgba(255,255,255,0.02)] rounded-lg"
-            >
-              <div className="w-2 h-2 rounded-full bg-[--neon-cyan]" />
-              <span className="text-sm text-[--text-secondary]">{activity}</span>
-            </div>
-          ))}
+        <div className="flex-1 overflow-hidden relative h-6">
+          <div className="animate-marquee whitespace-nowrap absolute top-0 left-0 flex gap-8 items-center text-sm text-text-secondary">
+            {[
+              'New idea submitted: "AI-Powered Code Review Tool"',
+              'Voting cycle started for Week 12',
+              'MVP "Task Automator" completed and deployed',
+              'User @crypto_dev joined the chat',
+              'New forum discussion: "Scaling Web3 Infrastructure"'
+            ].map((activity, i) => (
+              <span key={i} className="flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-neon-purple" />
+                {activity}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
+
     </div>
   );
 }

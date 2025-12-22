@@ -1,9 +1,3 @@
-// ============================================
-// 24HRMVP - CHAT ROOMS LIST PAGE
-// File: frontend/app/grid/chat/page.tsx
-// FIXED: Use getToken helper instead of token from useAuth
-// ============================================
-
 'use client';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +15,8 @@ import {
   Loader2,
   RefreshCw,
   Globe,
-  Lock
+  Lock,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth, getToken } from '@/providers/AuthProvider';
 import { getApiUrl } from '@/lib/config';
@@ -49,7 +44,7 @@ const roomIcons: Record<string, string> = {
   general: '💬',
   ideas: '💡',
   development: '🔧',
-  builders: '🔧',
+  builders: '👷',
   announcements: '📢',
   help: '❓',
 };
@@ -176,12 +171,12 @@ function ChatPageContent() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 py-6">
         <LoadingSkeleton className="h-12 w-48 mb-6" />
-        <LoadingSkeleton className="h-12 w-full mb-4" />
+        <LoadingSkeleton className="h-16 w-full mb-6" />
         <div className="grid gap-4">
           {[1, 2, 3, 4, 5].map(i => (
-            <LoadingSkeleton key={i} className="h-24" />
+            <LoadingSkeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
       </div>
@@ -194,17 +189,17 @@ function ChatPageContent() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="text-center py-16 px-8 bg-[rgba(255,255,255,0.03)] rounded-xl border border-red-500/30">
-          <MessageSquare className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Error Loading Rooms</h2>
-          <p className="text-[#808080] mb-6">{error}</p>
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 py-6">
+        <div className="chrome-glass-card p-12 text-center">
+          <MessageSquare className="w-16 h-16 text-neon-orange mx-auto mb-6" />
+          <h2 className="text-2xl font-display font-bold text-white mb-2">Error Loading Rooms</h2>
+          <p className="text-text-secondary mb-8">{error}</p>
           <button
             onClick={fetchRooms}
-            className="px-6 py-3 bg-[#04D9FF] text-black font-semibold rounded-lg hover:bg-[#04D9FF]/80 transition-colors inline-flex items-center gap-2"
+            className="btn-chrome-primary inline-flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
-            Retry
+            Retry Connection
           </button>
         </div>
       </div>
@@ -216,21 +211,15 @@ function ChatPageContent() {
   // ============================================
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 py-6">
       {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/grid"
-          className="inline-flex items-center gap-2 text-[#808080] hover:text-[#04D9FF] transition-colors mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Grid
-        </Link>
-        
-        <div className="flex items-center justify-between">
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Chat Rooms</h1>
-            <p className="text-[#808080]">
+            <h1 className="text-3xl md:text-4xl font-display font-bold text-white mb-2 tracking-wide">
+              Chat <span className="text-neon-cyan">Rooms</span>
+            </h1>
+            <p className="text-text-secondary text-lg">
               Join conversations with the 24HRMVP community
             </p>
           </div>
@@ -238,7 +227,7 @@ function ChatPageContent() {
           {user && (
             <Link
               href="/grid/chat/create"
-              className="px-4 py-2 bg-[#04D9FF] text-black font-semibold rounded-lg hover:bg-[#04D9FF]/80 transition-colors flex items-center gap-2"
+              className="btn-neon inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Create Room
@@ -248,77 +237,68 @@ function ChatPageContent() {
       </div>
 
       {/* Search & Filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+      <div className="mb-8 flex flex-col lg:flex-row gap-4">
         {/* Search */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#808080]" />
+        <div className="flex-1 relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary group-focus-within:text-neon-cyan transition-colors" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search rooms..."
-            className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-[#808080] focus:border-[#04D9FF] focus:outline-none transition-colors"
+            className="w-full pl-12 pr-4 py-4 bg-surface-1/50 border border-white/10 rounded-xl text-white placeholder-text-tertiary focus:border-neon-cyan focus:outline-none focus:ring-1 focus:ring-neon-cyan/50 transition-all"
           />
         </div>
         
-        {/* Type Filter */}
-        <div className="flex gap-2">
-          {(['all', 'PUBLIC', 'PRIVATE'] as const).map((type) => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filterType === type
-                  ? 'bg-[#04D9FF] text-black'
-                  : 'bg-white/5 text-[#808080] hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {type === 'all' ? 'All' : type === 'PUBLIC' ? 'Public' : 'Private'}
-            </button>
-          ))}
+        <div className="flex gap-4">
+          {/* Type Filter */}
+          <div className="flex bg-surface-1/50 p-1 rounded-xl border border-white/10">
+            {(['all', 'PUBLIC', 'PRIVATE'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`px-6 py-3 rounded-lg font-heading font-medium transition-all ${
+                  filterType === type
+                    ? 'bg-neon-cyan/10 text-neon-cyan shadow-[0_0_10px_rgba(4,217,255,0.2)]'
+                    : 'text-text-secondary hover:text-white'
+                }`}
+              >
+                {type === 'all' ? 'All' : type === 'PUBLIC' ? 'Public' : 'Private'}
+              </button>
+            ))}
+          </div>
+          
+          {/* Refresh */}
+          <button
+            onClick={fetchRooms}
+            className="px-4 bg-surface-1/50 border border-white/10 rounded-xl text-text-secondary hover:text-neon-cyan hover:border-neon-cyan/50 transition-colors"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
         </div>
-        
-        {/* Refresh */}
-        <button
-          onClick={fetchRooms}
-          className="p-3 bg-white/5 border border-white/10 rounded-lg text-[#808080] hover:text-[#04D9FF] hover:border-[#04D9FF]/50 transition-colors"
-        >
-          <RefreshCw className="w-5 h-5" />
-        </button>
       </div>
 
-      {/* Room Stats */}
-      <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-4 bg-white/5 rounded-lg border border-white/10">
-          <p className="text-2xl font-bold text-[#04D9FF]">{rooms.length}</p>
-          <p className="text-sm text-[#808080]">Total Rooms</p>
-        </div>
-        <div className="p-4 bg-white/5 rounded-lg border border-white/10">
-          <p className="text-2xl font-bold text-[#04D9FF]">
-            {rooms.filter(r => r.type === 'PUBLIC').length}
-          </p>
-          <p className="text-sm text-[#808080]">Public</p>
-        </div>
-        <div className="p-4 bg-white/5 rounded-lg border border-white/10">
-          <p className="text-2xl font-bold text-[#04D9FF]">
-            {rooms.reduce((sum, r) => sum + r.memberCount, 0)}
-          </p>
-          <p className="text-sm text-[#808080]">Total Members</p>
-        </div>
-        <div className="p-4 bg-white/5 rounded-lg border border-white/10">
-          <p className="text-2xl font-bold text-[#04D9FF]">
-            {rooms.reduce((sum, r) => sum + r.messageCount, 0)}
-          </p>
-          <p className="text-sm text-[#808080]">Messages</p>
-        </div>
+      {/* Room Stats HUD */}
+      <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Rooms', value: rooms.length, color: 'text-neon-cyan' },
+          { label: 'Public', value: rooms.filter(r => r.type === 'PUBLIC').length, color: 'text-neon-blue' },
+          { label: 'Total Members', value: rooms.reduce((sum, r) => sum + r.memberCount, 0), color: 'text-neon-purple' },
+          { label: 'Messages', value: rooms.reduce((sum, r) => sum + r.messageCount, 0), color: 'text-neon-pink' },
+        ].map((stat, i) => (
+          <div key={i} className="p-4 bg-surface-1/30 rounded-xl border border-white/5 backdrop-blur-sm">
+            <p className={`text-2xl font-mono font-bold ${stat.color}`}>{stat.value}</p>
+            <p className="text-xs uppercase tracking-wider text-text-tertiary font-bold mt-1">{stat.label}</p>
+          </div>
+        ))}
       </div>
 
       {/* Room List */}
       {filteredRooms.length === 0 ? (
-        <div className="text-center py-16 px-8 bg-[rgba(255,255,255,0.03)] rounded-xl border border-[rgba(4,217,255,0.1)]">
-          <MessageSquare className="w-12 h-12 text-[#04D9FF]/50 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">No Rooms Found</h2>
-          <p className="text-[#808080]">
+        <div className="chrome-glass-card p-12 text-center">
+          <MessageSquare className="w-16 h-16 text-text-tertiary mx-auto mb-6 opacity-50" />
+          <h2 className="text-xl font-heading font-bold text-white mb-2">No Rooms Found</h2>
+          <p className="text-text-secondary">
             {searchQuery ? 'Try a different search term' : 'No chat rooms available yet'}
           </p>
         </div>
@@ -332,52 +312,59 @@ function ChatPageContent() {
               transition={{ delay: index * 0.05 }}
             >
               <Link href={`/grid/chat/${room.slug}`}>
-                <div className="group p-5 bg-white/5 rounded-xl border border-white/10 hover:border-[#04D9FF]/50 hover:bg-[#04D9FF]/5 transition-all cursor-pointer">
-                  <div className="flex items-start gap-4">
+                <div className="group relative p-6 bg-surface-1/40 rounded-xl border border-white/10 overflow-hidden transition-all duration-300 hover:border-neon-cyan/50 hover:shadow-[0_0_20px_rgba(4,217,255,0.1)] hover:bg-surface-1/60">
+                  {/* Hover Gradient Background */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-neon-cyan/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                  <div className="relative z-10 flex items-start gap-6">
                     {/* Room Icon */}
-                    <div className="w-12 h-12 rounded-lg bg-[#04D9FF]/10 flex items-center justify-center text-2xl flex-shrink-0">
-                      {roomIcons[room.slug] || <Hash className="w-6 h-6 text-[#04D9FF]" />}
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                      {roomIcons[room.slug] || <Hash className="w-6 h-6 text-neon-cyan" />}
                     </div>
                     
                     {/* Room Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-white group-hover:text-[#04D9FF] transition-colors truncate">
+                    <div className="flex-1 min-w-0 py-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-heading font-bold text-white group-hover:text-neon-cyan transition-colors truncate">
                           {room.name}
                         </h3>
                         {room.type === 'PRIVATE' ? (
-                          <Lock className="w-4 h-4 text-[#808080] flex-shrink-0" />
+                          <div className="flex items-center gap-1 text-xs font-mono text-neon-orange bg-neon-orange/10 px-2 py-0.5 rounded border border-neon-orange/20">
+                            <Lock className="w-3 h-3" /> PRIVATE
+                          </div>
                         ) : (
-                          <Globe className="w-4 h-4 text-[#808080] flex-shrink-0" />
+                          <div className="flex items-center gap-1 text-xs font-mono text-neon-blue bg-neon-blue/10 px-2 py-0.5 rounded border border-neon-blue/20">
+                            <Globe className="w-3 h-3" /> PUBLIC
+                          </div>
                         )}
                       </div>
                       
                       {room.description && (
-                        <p className="text-sm text-[#808080] line-clamp-2 mb-2">
+                        <p className="text-text-secondary text-sm line-clamp-2 mb-3 max-w-2xl">
                           {room.description}
                         </p>
                       )}
                       
-                      <div className="flex items-center gap-4 text-xs text-[#808080]">
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3.5 h-3.5" />
-                          {room.memberCount} {room.memberCount === 1 ? 'member' : 'members'}
+                      <div className="flex items-center gap-6 text-xs text-text-tertiary font-mono">
+                        <span className="flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-neon-cyan/70" />
+                          <span className="text-white/80">{room.memberCount}</span> members
                         </span>
-                        <span className="flex items-center gap-1">
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          {room.messageCount} {room.messageCount === 1 ? 'message' : 'messages'}
+                        <span className="flex items-center gap-1.5">
+                          <MessageSquare className="w-3.5 h-3.5 text-neon-purple/70" />
+                          <span className="text-white/80">{room.messageCount}</span> messages
                         </span>
-                        <span>
-                          {formatLastActivity(room.lastMessageAt)}
+                        <span className="flex items-center gap-1.5 border-l border-white/10 pl-6">
+                          Active: <span className="text-neon-green">{formatLastActivity(room.lastMessageAt)}</span>
                         </span>
                       </div>
                     </div>
                     
                     {/* Join Arrow */}
-                    <div className="text-[#808080] group-hover:text-[#04D9FF] transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                    <div className="self-center pr-4">
+                      <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-text-tertiary group-hover:text-black group-hover:bg-neon-cyan group-hover:border-neon-cyan transition-all duration-300">
+                        <ChevronRight className="w-5 h-5" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -397,12 +384,12 @@ function ChatPageContent() {
 export default function ChatPage() {
   return (
     <ClientOnly fallback={
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 py-6">
         <LoadingSkeleton className="h-12 w-48 mb-6" />
-        <LoadingSkeleton className="h-12 w-full mb-4" />
+        <LoadingSkeleton className="h-16 w-full mb-6" />
         <div className="grid gap-4">
           {[1, 2, 3, 4, 5].map(i => (
-            <LoadingSkeleton key={i} className="h-24" />
+            <LoadingSkeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
       </div>

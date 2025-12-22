@@ -7,7 +7,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '@/lib/api/client';
+// Fixed: Changed to default import
+import apiClient from '@/lib/api/client';
 import type { ForumPost, ForumFeedResponse } from '@/lib/types/grid';
 
 export interface ForumFeedFilters {
@@ -30,7 +31,7 @@ export function useForumFeed(initialFilters: ForumFeedFilters = {}) {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const params = new URLSearchParams();
       if (filters.sort) params.set('sort', filters.sort);
@@ -44,7 +45,7 @@ export function useForumFeed(initialFilters: ForumFeedFilters = {}) {
       const endpoint = `/api/grid/forum${queryString ? `?${queryString}` : ''}`;
       
       const response = await apiClient.get<ForumFeedResponse>(endpoint);
-      
+
       if (response.success && response.posts) {
         setPosts(response.posts);
         setTotalPages(response.pagination?.pages || 1);

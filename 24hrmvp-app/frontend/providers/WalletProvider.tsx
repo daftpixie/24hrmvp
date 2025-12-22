@@ -1,48 +1,84 @@
-'use client';
-
 /**
- * Wallet Provider - Wraps app with WagmiProvider and RainbowKitProvider
+ * Wallet Provider - RainbowKit + Wagmi Integration
  * 
- * @version 5.1.0 - Robust fix for WagmiProviderNotFoundError
+ * @version 6.0.0 - Fixed double initialization
  * 
- * This provider MUST wrap your entire app for wallet functionality to work.
- * It handles SSR properly by only rendering wallet UI after hydration.
+ * This provider wraps the app with:
+ * - WagmiProvider for blockchain interactions
+ * - QueryClientProvider for React Query
+ * - RainbowKitProvider for wallet UI
+ * 
+ * IMPORTANT: This must wrap AuthProvider in the component tree
  */
+
+'use client';
 
 import React, { useState, useEffect, type ReactNode } from 'react';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
+import { RainbowKitProvider, darkTheme, type Theme } from '@rainbow-me/rainbowkit';
 
-// Import wagmi config from centralized location
-import { config as wagmiConfig } from '@/lib/wagmi';
+// Import the singleton config
+import { config } from '@/lib/wagmi';
 
 // Import RainbowKit styles
 import '@rainbow-me/rainbowkit/styles.css';
 
 // ============================================
-// QUERY CLIENT
+// QUERY CLIENT (Singleton)
 // ============================================
 
-// Create a stable query client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
+let queryClient: QueryClient | null = null;
 
-// Custom theme for RainbowKit matching 24HRMVP design
-const customTheme = darkTheme({
-  accentColor: '#04D9FF',
-  accentColorForeground: '#0B192A',
-  borderRadius: 'medium',
-  fontStack: 'system',
-  overlayBlur: 'small',
-});
+function getQueryClient(): QueryClient {
+  if (!queryClient) {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          staleTime: 1000 * 60 * 5, // 5 minutes
+          refetchOnWindowFocus: false,
+          retry: 1,
+        },
+      },
+    });
+  }
+  return queryClient;
+}
+
+// ============================================
+// CUSTOM THEME
+// ============================================
+
+const customTheme: Theme = {
+  ...darkTheme({
+    accentColor: '#04D9FF',
+    accentColorForeground: '#0B192A',
+    borderRadius: 'medium',
+    fontStack: 'system',
+    overlayBlur: 'small',
+  }),
+  colors: {
+    ...darkTheme().colors,
+    modalBackground: '#1A1A1A',
+    modalBorder: 'rgba(4, 217, 255, 0.2)',
+    profileForeground: '#1E1E1E',
+    closeButton: '#808080',
+    closeButtonBackground: 'rgba(255, 255, 255, 0.05)',
+    actionButtonBorder: 'rgba(4, 217, 255, 0.3)',
+    actionButtonSecondaryBackground: 'rgba(4, 217, 255, 0.1)',
+    error: '#FF5C00',
+  },
+};
+
+// ============================================
+// MOUNTED CONTEXT
+// ============================================
+
+const WalletMountedContext = React.createContext(false);
+
+export function useWalletMounted(): boolean {
+  return React.useContext(WalletMountedContext);
+}
 
 // ============================================
 // PROVIDER COMPONENT
@@ -53,18 +89,19 @@ interface WalletProviderProps {
 }
 
 export function WalletProvider({ children }: WalletProviderProps) {
-  // Track if we're mounted (client-side)
   const [mounted, setMounted] = useState(false);
 
+  // Track client-side mounting
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Always render the providers - they handle SSR internally
-  // But pass a flag down so child components know when it's safe to render wallet UI
+  // Get or create the query client
+  const client = getQueryClient();
+
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={client}>
         <RainbowKitProvider
           theme={customTheme}
           modalSize="compact"
@@ -80,13 +117,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
       </QueryClientProvider>
     </WagmiProvider>
   );
-}
-
-// Context to let child components know when wallet is ready
-const WalletMountedContext = React.createContext(false);
-
-export function useWalletMounted() {
-  return React.useContext(WalletMountedContext);
 }
 
 export default WalletProvider;

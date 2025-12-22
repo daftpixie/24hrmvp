@@ -1,141 +1,174 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useForumThread, usePostMutations } from '@/hooks/useGrid';
-import type { ForumPost } from '@/lib/api/grid';
-import { ChevronUp, ChevronDown, MessageCircle, Reply, Loader2, AlertCircle } from 'lucide-react';
+/**
+ * ThreadedDiscussion Component for 24HRMVP
+ * 
+ * @version 5.0.0
+ */
 
-// Local ForumComment type that matches what useForumThread returns
-interface ForumComment {
-  id: string;
-  content: string;
-  author: {
-    id: string;
-    username: string;
-    displayName: string | null;
-    pfpUrl: string | null;
-  };
-  createdAt: string;
-  updatedAt: string;
-  upvotes: number;
-  downvotes: number;
-  score: number;
-  parentId: string | null;
-  replyCount?: number;
-  replies?: ForumComment[];
-  userVote?: number;
-}
+import React, { useMemo, useState } from 'react';
+import {
+  useForumThread,
+  usePostMutations,
+} from '@/hooks/useGrid';
+import type { ForumComment } from '@/lib/types/grid';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  ArrowBigDown,
+  ArrowBigUp,
+  Bookmark,
+  MessageCircle,
+  RefreshCw,
+} from 'lucide-react';
 
 interface ThreadedDiscussionProps {
-  slug: string;
+  postId: string;
 }
 
-export function ThreadedDiscussion({ slug }: ThreadedDiscussionProps) {
-  const { post, comments, loading, error, refresh } = useForumThread(slug);
-  const { voteOnPost } = usePostMutations();
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+function formatDate(date: string | Date) {
+  return formatDistanceToNow(new Date(date), { addSuffix: true });
+}
 
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+export default function ThreadedDiscussion({ postId }: ThreadedDiscussionProps) {
+  const { post, comments, loading, error, refresh } = useForumThread(postId);
+  const { submitComment, votePost, submitting } = usePostMutations(postId);
 
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return diffMins + 'm ago';
-    if (diffHours < 24) return diffHours + 'h ago';
-    if (diffDays < 7) return diffDays + 'd ago';
-    return date.toLocaleDateString();
+  const [replyContent, setReplyContent] = useState('');
+  const [activeParentId, setActiveParentId] = useState<string | null>(null);
+
+  const topLevelComments = useMemo(
+    () => comments.filter(comment => !comment.parentId),
+    [comments],
+  );
+
+  const groupedReplies = useMemo(() => {
+    const map: Record<string, ForumComment[]> = {};
+    comments.forEach(comment => {
+      if (comment.parentId) {
+        if (!map[comment.parentId]) map[comment.parentId] = [];
+        map[comment.parentId].push(comment);
+      }
+    });
+    return map;
+  }, [comments]);
+
+  const handleVote = async (id: string, value: number) => {
+    if (!post) return;
+    await votePost(value);
+    refresh();
   };
 
-  const handleVote = async (postId: string, value: 1 | -1) => {
-    try {
-      await voteOnPost(postId, value);
-    } catch (err) {
-      console.error('Vote failed:', err);
-    }
+  const handleReplySubmit = async (parentId?: string) => {
+    if (!replyContent.trim()) return;
+    await submitComment({
+      content: replyContent.trim(),
+      parentId,
+    });
+    setReplyContent('');
+    setActiveParentId(null);
+    refresh();
   };
 
-  const renderReply = (reply: ForumComment, depth: number = 0) => {
-    const maxDepth = 4;
-    const indentClass = depth > 0 ? `ml-${Math.min(depth * 4, 16)}` : '';
-    
+  const renderReply = (reply: ForumComment) => {
+    const replies = groupedReplies[reply.id] || [];
     return (
-      <div key={reply.id} className={indentClass}>
-        <div className="p-4 bg-[#1E1E1E]/40 border border-white/5 rounded-lg mb-2 hover:border-white/10 transition-colors">
-          <div className="flex gap-3">
-            <div className="flex flex-col items-center gap-1">
-              <button
-                onClick={() => handleVote(reply.id, 1)}
-                className={reply.userVote === 1 ? 'p-1 text-[#04D9FF]' : 'p-1 text-[#808080] hover:text-white'}
-              >
-                <ChevronUp className="w-4 h-4" />
-              </button>
-              <span className={reply.score > 0 ? 'text-xs font-mono text-[#04D9FF]' : reply.score < 0 ? 'text-xs font-mono text-red-400' : 'text-xs font-mono text-[#808080]'}>
-                {reply.score}
+      <div key={reply.id} className="ml-8 mt-4 border-l border-[#222] pl-4">
+        <div className="flex items-start gap-3">
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={() => handleVote(reply.id, 1)}
+              className={cn(
+                'p-1 text-[#808080] hover:text-white',
+                reply.userVote === 1 && 'text-[#04D9FF]',
+              )}
+            >
+              <ArrowBigUp className="h-4 w-4" />
+            </button>
+            <span
+              className={cn(
+                'font-mono text-xs font-bold',
+                reply.score > 0 && 'text-[#04D9FF]',
+                reply.score < 0 && 'text-red-400',
+                reply.score === 0 && 'text-[#808080]',
+              )}
+            >
+              {reply.score}
+            </span>
+            <button
+              onClick={() => handleVote(reply.id, -1)}
+              className={cn(
+                'p-1 text-[#808080] hover:text-white',
+                reply.userVote === -1 && 'text-red-400',
+              )}
+            >
+              <ArrowBigDown className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2 text-xs text-[#808080]">
+              <span className="font-mono text-[#E2E8F0]">
+                {reply.author?.username || 'Anonymous'}
               </span>
-              <button
-                onClick={() => handleVote(reply.id, -1)}
-                className={reply.userVote === -1 ? 'p-1 text-red-400' : 'p-1 text-[#808080] hover:text-white'}
+              <span>·</span>
+              <span>{formatDate(reply.createdAt)}</span>
+            </div>
+            <p className="text-sm text-[#E2E8F0] whitespace-pre-wrap">
+              {reply.content}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="xs"
+                className="h-7 px-2 text-xs text-[#808080] hover:text-[#E2E8F0]"
+                onClick={() =>
+                  setActiveParentId(
+                    activeParentId === reply.id ? null : reply.id,
+                  )
+                }
               >
-                <ChevronDown className="w-4 h-4" />
-              </button>
+                <MessageCircle className="mr-1 h-3 w-3" />
+                Reply
+              </Button>
             </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 text-xs text-[#808080] mb-2">
-                <img
-                  src={reply.author?.pfpUrl || '/default-avatar.png'}
-                  alt=""
-                  className="w-5 h-5 rounded-full"
+            {activeParentId === reply.id && (
+              <div className="mt-2 space-y-2">
+                <Textarea
+                  value={replyContent}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReplyContent(e.target.value)}
+                  placeholder="Reply to this comment..."
+                  className="min-h-[80px] resize-none bg-black/40 text-sm text-[#E2E8F0]"
                 />
-                <span className="font-medium text-white">{reply.author?.username || 'Anonymous'}</span>
-                <span>·</span>
-                <span>{formatDate(reply.createdAt)}</span>
-              </div>
-
-              <p className="text-[#B0B0B0] text-sm whitespace-pre-wrap">{reply.content}</p>
-
-              <div className="flex items-center gap-4 mt-2">
-                <button
-                  onClick={() => setReplyingTo(replyingTo === reply.id ? null : reply.id)}
-                  className="flex items-center gap-1 text-xs text-[#808080] hover:text-[#04D9FF] transition-colors"
-                >
-                  <Reply className="w-3 h-3" />
-                  Reply
-                </button>
-              </div>
-
-              {replyingTo === reply.id && (
-                <div className="mt-3 p-3 bg-white/5 rounded-lg">
-                  <textarea
-                    placeholder="Write a reply..."
-                    className="w-full p-2 bg-transparent border border-white/10 rounded text-white text-sm resize-none focus:outline-none focus:border-[#04D9FF]"
-                    rows={3}
-                  />
-                  <div className="flex justify-end gap-2 mt-2">
-                    <button
-                      onClick={() => setReplyingTo(null)}
-                      className="px-3 py-1 text-xs text-[#808080] hover:text-white"
-                    >
-                      Cancel
-                    </button>
-                    <button className="px-3 py-1 text-xs bg-[#04D9FF] text-black rounded font-medium hover:bg-[#04D9FF]/80">
-                      Post Reply
-                    </button>
-                  </div>
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={submitting}
+                    onClick={() => {
+                      setActiveParentId(null);
+                      setReplyContent('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={submitting || !replyContent.trim()}
+                    onClick={() => handleReplySubmit(reply.id)}
+                  >
+                    {submitting ? 'Posting...' : 'Post reply'}
+                  </Button>
                 </div>
-              )}
-
-              {/* Render nested replies */}
-              {reply.replies && reply.replies.length > 0 && depth < maxDepth && (
-                <div className="mt-3 space-y-2">
-                  {reply.replies.map((nestedReply) => renderReply(nestedReply, depth + 1))}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+            {replies.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {replies.map((child: ForumComment) => renderReply(child))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -144,92 +177,244 @@ export function ThreadedDiscussion({ slug }: ThreadedDiscussionProps) {
 
   if (loading && !post) {
     return (
-      <div className="p-8 text-center">
-        <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#04D9FF]" />
-        <p className="text-[#808080] mt-2">Loading discussion...</p>
+      <div className="flex min-h-[200px] items-center justify-center text-sm text-[#808080]">
+        Loading thread...
       </div>
     );
   }
 
-  if (error) {
+  if (error || !post) {
     return (
-      <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-3 text-red-400">
-        <AlertCircle className="w-5 h-5" />
-        {error}
-      </div>
-    );
-  }
-
-  if (!post) {
-    return (
-      <div className="p-8 text-center text-[#808080]">
-        <p>Post not found</p>
+      <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 text-sm text-[#808080]">
+        <p>{error || 'Thread not found.'}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={refresh}
+          className="border-[#333] bg-black/40 text-xs text-[#E2E8F0] hover:bg-black/60"
+        >
+          <RefreshCw className="mr-1 h-3 w-3" />
+          Retry
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <article className="p-6 bg-[#1E1E1E]/60 border border-white/10 rounded-xl">
-        <div className="flex gap-4">
-          <div className="flex flex-col items-center gap-1">
-            <button
-              onClick={() => handleVote(post.id, 1)}
-              className={post.userVote === 1 ? 'p-2 text-[#04D9FF]' : 'p-2 text-[#808080] hover:text-white'}
-            >
-              <ChevronUp className="w-6 h-6" />
-            </button>
-            <span className={post.score > 0 ? 'font-mono font-bold text-[#04D9FF]' : post.score < 0 ? 'font-mono font-bold text-red-400' : 'font-mono font-bold text-[#808080]'}>
-              {post.score}
+    <div className="space-y-6 rounded-2xl border border-[#1F2933] bg-[#020617]/80 p-4 backdrop-blur">
+      {/* Post header */}
+      <div className="flex gap-4">
+        <div className="flex flex-col items-center gap-1">
+          <button
+            onClick={() => handleVote(post.id, 1)}
+            className={cn(
+              'p-2 text-[#808080] hover:text-white',
+              post.userVote === 1 && 'text-[#04D9FF]',
+            )}
+          >
+            <ArrowBigUp className="h-5 w-5" />
+          </button>
+          <span
+            className={cn(
+              'font-mono text-sm font-bold',
+              post.score > 0 && 'text-[#04D9FF]',
+              post.score < 0 && 'text-red-400',
+              post.score === 0 && 'text-[#808080]',
+            )}
+          >
+            {post.score}
+          </span>
+          <button
+            onClick={() => handleVote(post.id, -1)}
+            className={cn(
+              'p-2 text-[#808080] hover:text-white',
+              post.userVote === -1 && 'text-red-400',
+            )}
+          >
+            <ArrowBigDown className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex-1 space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[#808080]">
+            <span className="rounded-full border border-[#27272A] bg-black/40 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-[#A5B4FC]">
+              {post.type || 'Discussion'}
             </span>
-            <button
-              onClick={() => handleVote(post.id, -1)}
-              className={post.userVote === -1 ? 'p-2 text-red-400' : 'p-2 text-[#808080] hover:text-white'}
-            >
-              <ChevronDown className="w-6 h-6" />
-            </button>
+            <span className="font-mono text-[#E2E8F0]">
+              {post.author?.username || 'Anonymous'}
+            </span>
+            <span>·</span>
+            <span>{formatDate(post.createdAt)}</span>
+            {post.viewCount != null && (
+              <>
+                <span>·</span>
+                <span>{post.viewCount} views</span>
+              </>
+            )}
           </div>
-
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-white mb-2">{post.title || 'Untitled'}</h1>
-            
-            <div className="flex items-center gap-3 text-sm text-[#808080] mb-4">
-              <img
-                src={post.author?.pfpUrl || '/default-avatar.png'}
-                alt=""
-                className="w-6 h-6 rounded-full"
-              />
-              <span className="text-white">{post.author?.username || 'Anonymous'}</span>
-              <span>·</span>
-              <span>{formatDate(post.createdAt)}</span>
-              <span>·</span>
-              <span>{post.viewCount || 0} views</span>
+          <h2 className="text-lg font-semibold text-[#F9FAFB]">
+            {post.title || 'Untitled'}
+          </h2>
+          <p className="text-sm leading-relaxed text-[#E2E8F0] whitespace-pre-wrap">
+            {post.content}
+          </p>
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {post.tags.map(tag => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-[#111827] bg-[#020617] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[#6EE7B7]"
+                >
+                  #{tag}
+                </span>
+              ))}
             </div>
-
-            <div className="text-[#B0B0B0] whitespace-pre-wrap">{post.content}</div>
+          )}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[#808080]">
+            <div className="flex items-center gap-1">
+              <MessageCircle className="h-3 w-3" />
+              <span>{comments.length} replies</span>
+            </div>
+            <button className="inline-flex items-center gap-1 text-xs text-[#808080] hover:text-[#E2E8F0]">
+              <Bookmark className="h-3 w-3" />
+              Save
+            </button>
           </div>
         </div>
-      </article>
-
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <MessageCircle className="w-5 h-5 text-[#04D9FF]" />
-          {comments.length} Replies
-        </h2>
       </div>
 
-      {comments.length > 0 ? (
-        <div className="space-y-2">
-          {comments.map((reply) => renderReply(reply as ForumComment))}
+      {/* New comment box */}
+      <div className="space-y-3 rounded-xl border border-[#1F2933] bg-black/40 p-3">
+        <Textarea
+          value={replyContent}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReplyContent(e.target.value)}
+          placeholder="Share your thoughts..."
+          className="min-h-[80px] resize-none bg-black/40 text-sm text-[#E2E8F0]"
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-[#6B7280]">
+            Be respectful. Constructive feedback moves the grid forward.
+          </span>
+          <Button
+            size="sm"
+            disabled={submitting || !replyContent.trim()}
+            onClick={() => handleReplySubmit()}
+          >
+            {submitting ? 'Posting...' : 'Post comment'}
+          </Button>
         </div>
-      ) : (
-        <div className="text-center py-8 text-[#808080]">
-          <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p>No replies yet. Be the first to respond!</p>
-        </div>
-      )}
+      </div>
+
+      {/* Comments */}
+      <div className="space-y-4">
+        {topLevelComments.length === 0 ? (
+          <p className="text-center text-xs text-[#6B7280]">
+            No replies yet. Start the conversation.
+          </p>
+        ) : (
+          topLevelComments.map((comment: ForumComment) => {
+            const replies = groupedReplies[comment.id] || [];
+            return (
+              <div key={comment.id} className="border-t border-[#111827] pt-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex flex-col items-center gap-1">
+                    <button
+                      onClick={() => handleVote(comment.id, 1)}
+                      className={cn(
+                        'p-1 text-[#808080] hover:text-white',
+                        comment.userVote === 1 && 'text-[#04D9FF]',
+                      )}
+                    >
+                      <ArrowBigUp className="h-4 w-4" />
+                    </button>
+                    <span
+                      className={cn(
+                        'font-mono text-xs font-bold',
+                        comment.score > 0 && 'text-[#04D9FF]',
+                        comment.score < 0 && 'text-red-400',
+                        comment.score === 0 && 'text-[#808080]',
+                      )}
+                    >
+                      {comment.score}
+                    </span>
+                    <button
+                      onClick={() => handleVote(comment.id, -1)}
+                      className={cn(
+                        'p-1 text-[#808080] hover:text-white',
+                        comment.userVote === -1 && 'text-red-400',
+                      )}
+                    >
+                      <ArrowBigDown className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-[#808080]">
+                      <span className="font-mono text-[#E2E8F0]">
+                        {comment.author?.username || 'Anonymous'}
+                      </span>
+                      <span>·</span>
+                      <span>{formatDate(comment.createdAt)}</span>
+                    </div>
+                    <p className="text-sm text-[#E2E8F0] whitespace-pre-wrap">
+                      {comment.content}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className="h-7 px-2 text-xs text-[#808080] hover:text-[#E2E8F0]"
+                        onClick={() =>
+                          setActiveParentId(
+                            activeParentId === comment.id ? null : comment.id,
+                          )
+                        }
+                      >
+                        <MessageCircle className="mr-1 h-3 w-3" />
+                        Reply
+                      </Button>
+                    </div>
+                    {activeParentId === comment.id && (
+                      <div className="mt-2 space-y-2">
+                        <Textarea
+                          value={replyContent}
+                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReplyContent(e.target.value)}
+                          placeholder="Reply to this comment..."
+                          className="min-h-[80px] resize-none bg-black/40 text-sm text-[#E2E8F0]"
+                        />
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={submitting}
+                            onClick={() => {
+                              setActiveParentId(null);
+                              setReplyContent('');
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            disabled={submitting || !replyContent.trim()}
+                            onClick={() => handleReplySubmit(comment.id)}
+                          >
+                            {submitting ? 'Posting...' : 'Post reply'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {replies.length > 0 && (
+                      <div className="mt-2 space-y-2">
+                        {replies.map((reply: ForumComment) => renderReply(reply))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }
-
-export default ThreadedDiscussion;

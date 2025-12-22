@@ -1,23 +1,27 @@
-'use client';
-
 /**
  * Authentication Button Component
  * 
- * @version 5.1.0 - Works with WalletProvider wrapping the app
+ * @version 6.0.0 - Unified auth flow with SIWE
  * 
- * This component requires WalletProvider to be in the component tree.
- * It uses RainbowKit's ConnectButton for wallet connection.
+ * This component handles three states:
+ * 1. Not connected - Shows "Connect Wallet" button
+ * 2. Connected but not signed in - Shows "Sign In" button
+ * 3. Signed in - Shows user avatar with dropdown
  */
+
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, LogOut, User, LayoutGrid, Wallet, AlertCircle } from 'lucide-react';
+import { ChevronDown, LogOut, User, LayoutGrid, Wallet, AlertCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AuthButton() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, isConnecting, signIn, signOut, error } = useAuth();
+  const { isConnected, address } = useAccount();
   const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -42,14 +46,16 @@ export default function AuthButton() {
     }
   }, [showDropdown]);
 
-  // Don't render anything until mounted to prevent hydration mismatch
+  // Don't render until mounted (prevents hydration mismatch)
   if (!mounted) {
     return (
       <div className="w-[140px] h-10 bg-[#1E1E1E]/50 rounded-lg animate-pulse" />
     );
   }
 
-  // AUTHENTICATED STATE (via our auth system)
+  // ============================================
+  // STATE 3: AUTHENTICATED - Show User Profile
+  // ============================================
   if (isAuthenticated && user) {
     const displayAddress = user.walletAddress || user.custodyAddress;
     const truncatedAddress = displayAddress
@@ -68,6 +74,7 @@ export default function AuthButton() {
             bg-[#1E1E1E] border border-[#04D9FF]/20 
             hover:border-[#04D9FF]/50 transition-all duration-200 group"
         >
+          {/* Avatar */}
           <div className="relative w-8 h-8 rounded-full overflow-hidden bg-[#2E2E2E] border border-white/10">
             {user.pfpUrl ? (
               <img
@@ -85,17 +92,21 @@ export default function AuthButton() {
                 </span>
               </div>
             )}
+            {/* Online indicator */}
+            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[#1E1E1E]" />
           </div>
 
-          <div className="flex flex-col items-start">
-            <span className="text-xs font-bold text-[#FAFAFA] leading-none mb-0.5">
+          {/* User Info */}
+          <div className="flex flex-col items-start max-w-[100px]">
+            <span className="text-xs font-bold text-[#FAFAFA] leading-none mb-0.5 truncate w-full">
               {user.displayName || user.username}
             </span>
-            <span className="text-[10px] text-[#808080] font-mono">
+            <span className="text-[10px] text-[#808080] font-mono truncate w-full">
               {truncatedAddress}
             </span>
           </div>
 
+          {/* Dropdown Arrow */}
           <ChevronDown
             className={`w-3 h-3 text-[#808080] transition-transform ${
               showDropdown ? 'rotate-180' : ''
@@ -103,16 +114,19 @@ export default function AuthButton() {
           />
         </motion.button>
 
+        {/* Dropdown Menu */}
         <AnimatePresence>
           {showDropdown && (
             <motion.div
               initial={{ opacity: 0, y: 8, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
               className="absolute right-0 top-full mt-2 w-48 py-1 rounded-xl 
                 bg-[#1A1A1A] border border-white/10 shadow-xl backdrop-blur-xl z-50 overflow-hidden"
             >
               <div className="p-1">
+                {/* Profile Link */}
                 <button
                   onClick={() => {
                     router.push(profilePath);
@@ -125,6 +139,7 @@ export default function AuthButton() {
                   Profile
                 </button>
 
+                {/* The Grid Link */}
                 <button
                   onClick={() => {
                     router.push('/grid');
@@ -138,10 +153,11 @@ export default function AuthButton() {
                 </button>
               </div>
 
+              {/* Disconnect Button */}
               <div className="border-t border-white/5 p-1 mt-1">
                 <button
                   onClick={async () => {
-                    await logout();
+                    await signOut();
                     setShowDropdown(false);
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm 
@@ -158,22 +174,57 @@ export default function AuthButton() {
     );
   }
 
-  // LOADING STATE
-  if (isLoading) {
+  // ============================================
+  // STATE 2: CONNECTED BUT NOT SIGNED IN
+  // ============================================
+  if (isConnected && address && !isLoading) {
+    const truncatedAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+
     return (
       <motion.button
-        disabled
-        className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm
-          bg-[#1E1E1E] border border-[#04D9FF]/30 text-[#04D9FF]/70
-          cursor-wait"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={signIn}
+        disabled={isConnecting}
+        className={`relative overflow-hidden group px-4 py-2 rounded-lg 
+          font-bold text-sm tracking-wide transition-all duration-300
+          ${isConnecting 
+            ? 'bg-[#1E1E1E] border border-[#04D9FF]/30 text-[#04D9FF]/70 cursor-wait'
+            : 'bg-gradient-to-r from-[#04D9FF]/10 to-[#1F51FF]/10 border border-[#04D9FF] text-[#04D9FF] hover:shadow-[0_0_15px_rgba(4,217,255,0.3)]'
+          }`}
       >
-        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-        <span>SIGNING IN...</span>
+        {isConnecting ? (
+          <span className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            SIGNING IN...
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            <Wallet className="w-4 h-4" />
+            <span>SIGN IN</span>
+            <span className="text-[10px] opacity-70 font-mono">({truncatedAddress})</span>
+          </span>
+        )}
       </motion.button>
     );
   }
 
-  // NOT CONNECTED / NOT AUTHENTICATED - Use RainbowKit ConnectButton
+  // ============================================
+  // LOADING STATE
+  // ============================================
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm
+        bg-[#1E1E1E] border border-[#04D9FF]/30 text-[#04D9FF]/70">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span>Loading...</span>
+      </div>
+    );
+  }
+
+  // ============================================
+  // STATE 1: NOT CONNECTED - Show Connect Button
+  // ============================================
   return (
     <ConnectButton.Custom>
       {({
@@ -204,34 +255,8 @@ export default function AuthButton() {
             })}
           >
             {(() => {
-              if (!connected) {
-                return (
-                  <motion.button
-                    whileHover={{ 
-                      scale: 1.02, 
-                      boxShadow: '0 0 15px rgba(4, 217, 255, 0.3)' 
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={openConnectModal}
-                    className="relative overflow-hidden group px-4 py-2 rounded-lg 
-                      font-bold text-sm tracking-wide
-                      bg-transparent border border-[#04D9FF] text-[#04D9FF]
-                      shadow-[0_0_8px_rgba(4,217,255,0.1)] hover:bg-[#04D9FF]/10
-                      transition-all duration-300"
-                  >
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="absolute inset-0 bg-gradient-to-r from-[#04D9FF] to-[#1F51FF] opacity-20 blur-xl" />
-                    </div>
-
-                    <span className="relative flex items-center gap-2">
-                      <Wallet className="w-4 h-4" />
-                      <span>CONNECT WALLET</span>
-                    </span>
-                  </motion.button>
-                );
-              }
-
-              if (chain?.unsupported) {
+              // Wrong network
+              if (connected && chain?.unsupported) {
                 return (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -247,17 +272,30 @@ export default function AuthButton() {
                 );
               }
 
+              // Not connected - show connect button
               return (
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ 
+                    scale: 1.02, 
+                    boxShadow: '0 0 15px rgba(4, 217, 255, 0.3)' 
+                  }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={openAccountModal}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm
-                    bg-[#1E1E1E] border border-[#04D9FF]/30 text-[#04D9FF]
-                    hover:border-[#04D9FF]/50 transition-all"
+                  onClick={openConnectModal}
+                  className="relative overflow-hidden group px-4 py-2 rounded-lg 
+                    font-bold text-sm tracking-wide
+                    bg-transparent border border-[#04D9FF] text-[#04D9FF]
+                    shadow-[0_0_8px_rgba(4,217,255,0.1)] hover:bg-[#04D9FF]/10
+                    transition-all duration-300"
                 >
-                  <Wallet className="w-4 h-4" />
-                  {account?.displayName}
+                  {/* Glow effect on hover */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#04D9FF] to-[#1F51FF] opacity-20 blur-xl" />
+                  </div>
+
+                  <span className="relative flex items-center gap-2">
+                    <Wallet className="w-4 h-4" />
+                    <span>CONNECT WALLET</span>
+                  </span>
                 </motion.button>
               );
             })()}
@@ -267,3 +305,6 @@ export default function AuthButton() {
     </ConnectButton.Custom>
   );
 }
+
+// Named export for tree-shaking
+export { AuthButton };

@@ -11,7 +11,7 @@ import LoadingSkeleton from '@/components/LoadingSkeleton';
 import Header from '@/components/layout/Header';
 import { useState, FormEvent, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/button';  // FIXED: lowercase 'button'
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import { useRouter } from 'next/navigation';
@@ -397,24 +397,21 @@ function SubmitPageContent() {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-[--text-tertiary]">
-              * At least 3 core features required. Up to 10 features allowed.
-            </p>
           </div>
 
-          {/* Technical Requirements */}
+          {/* Technical Specifications */}
           <div className="space-y-6">
             <h2 className="font-heading text-2xl font-semibold text-[--neon-cyan] border-b border-white/10 pb-3">
-              Technical Details
+              Technical Specifications (Optional)
             </h2>
 
             <div>
               <label className="block text-sm font-heading text-[--neon-cyan] mb-2">
-                Technical Requirements (Optional)
+                Technical Requirements
               </label>
               <textarea
                 className="w-full px-4 py-3 rounded-lg font-body bg-[rgba(255,255,255,0.05)] text-[--text-primary] border-2 border-[rgba(255,255,255,0.1)] focus:bg-[rgba(4,217,255,0.05)] focus:border-[--neon-cyan] focus:shadow-[0_0_0_3px_rgba(4,217,255,0.1),0_0_20px_rgba(4,217,255,0.2)] transition-all duration-300 min-h-24 resize-y"
-                placeholder="Tech stack, APIs, databases, third-party services, etc."
+                placeholder="e.g., Must integrate with Slack API, needs real-time sync, mobile-responsive design required..."
                 value={formData.technicalRequirements}
                 onChange={(e) => setFormData({ ...formData, technicalRequirements: e.target.value })}
                 maxLength={1000}
@@ -537,7 +534,7 @@ function SubmitPageContent() {
 
           {/* Submit Button */}
           <div className="pt-6 border-t border-white/10">
-            <Button variant="chrome" type="submit" disabled={loading} className="w-full">
+            <Button variant="primary" type="submit" disabled={loading} className="w-full">
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">

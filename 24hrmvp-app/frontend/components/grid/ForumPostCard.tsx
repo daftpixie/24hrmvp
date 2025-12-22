@@ -1,209 +1,136 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { ChevronUp, ChevronDown, MessageCircle, Bookmark, Clock, Eye } from 'lucide-react';
-import { usePostMutations } from '@/hooks/useGrid';
-import type { ForumPost } from '@/lib/api/grid';
+/**
+ * ForumPostCard Component for 24HRMVP
+ * 
+ * @version 5.0.0
+ */
 
-// Post type configuration with icons and colors
-type PostType = 'DISCUSSION' | 'QUESTION' | 'SHOWCASE' | 'FEEDBACK' | 'ANNOUNCEMENT' | 'TUTORIAL' | 'POLL';
-
-const postTypeConfig: Record<PostType, { color: string; icon: string; label: string }> = {
-  DISCUSSION: { color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: '💬', label: 'Discussion' },
-  QUESTION: { color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: '❓', label: 'Question' },
-  SHOWCASE: { color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', icon: '🚀', label: 'Showcase' },
-  FEEDBACK: { color: 'bg-orange-500/20 text-orange-400 border-orange-500/30', icon: '📝', label: 'Feedback' },
-  ANNOUNCEMENT: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: '📢', label: 'Announcement' },
-  TUTORIAL: { color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30', icon: '📚', label: 'Tutorial' },
-  POLL: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: '📊', label: 'Poll' },
-};
+import React from 'react';
+import type { ForumPost } from '@/lib/types/grid';
+import { useRouter } from 'next/navigation';
+import { formatDistanceToNow } from 'date-fns';
+import { Bookmark, MessageCircle, TrendingUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useForumFeed } from '@/hooks/useGrid';
 
 interface ForumPostCardProps {
   post: ForumPost;
-  showContent?: boolean;
-  onClick?: () => void;
+  onBookmarkToggle?: (postId: string) => Promise<void> | void;
 }
 
-export const ForumPostCard: React.FC<ForumPostCardProps> = ({
+function formatDate(date: string | Date) {
+  return formatDistanceToNow(new Date(date), { addSuffix: true });
+}
+
+export default function ForumPostCard({
   post,
-  showContent = true,
-  onClick,
-}) => {
-  const { voteOnPost, toggleBookmark } = usePostMutations();
-  const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked || false);
-  const [currentScore, setCurrentScore] = useState(post.score);
-  const [userVote, setUserVote] = useState<number | null>(post.userVote ?? null);
+  onBookmarkToggle,
+}: ForumPostCardProps) {
+  const router = useRouter();
+  const { toggleBookmark } = useForumFeed();
 
-  // Safely get type config with fallback
-  const typeConfig = postTypeConfig[post.type as PostType] || postTypeConfig.DISCUSSION;
-
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+  const handleOpen = () => {
+    router.push(`/grid/forum/${post.id}`);
   };
 
-  const handleVote = async (value: 1 | -1) => {
-    try {
-      const newVote = userVote === value ? 0 : value;
-      const scoreDiff = newVote - (userVote || 0);
-      
-      setUserVote(newVote === 0 ? null : newVote);
-      setCurrentScore(prev => prev + scoreDiff);
-      
-      if (newVote !== 0) {
-        await voteOnPost(post.id, value);
-      }
-    } catch (err) {
-      // Revert on error
-      setUserVote(post.userVote ?? null);
-      setCurrentScore(post.score);
-      console.error('Vote failed:', err);
-    }
-  };
-
-  // Fixed: toggleBookmark only takes postId (toggle behavior)
-  const handleBookmark = async () => {
-    try {
-      const newBookmarkState = !isBookmarked;
-      setIsBookmarked(newBookmarkState);
+  const handleBookmark = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onBookmarkToggle) {
+      await onBookmarkToggle(post.id);
+    } else {
       await toggleBookmark(post.id);
-    } catch (err) {
-      setIsBookmarked(isBookmarked);
-      console.error('Bookmark failed:', err);
     }
   };
+
+  // Safely access comment count from possible properties
+  const commentCount =
+    (post as any).commentCount ?? (post as any)._count?.comments ?? 0;
 
   return (
-    <article className="p-4 bg-[#1E1E1E]/60 border border-white/10 rounded-xl hover:border-[#04D9FF]/30 transition-all duration-200">
-      <div className="flex gap-4">
-        {/* Vote Column */}
-        <div className="flex flex-col items-center gap-1 min-w-[40px]">
-          <button
-            onClick={() => handleVote(1)}
-            className={`p-1 rounded hover:bg-white/10 transition-colors ${
-              userVote === 1 ? 'text-[#04D9FF]' : 'text-[#808080] hover:text-white'
-            }`}
-          >
-            <ChevronUp className="w-6 h-6" />
-          </button>
-          <span className={`font-mono font-bold text-sm ${
-            currentScore > 0 ? 'text-[#04D9FF]' : currentScore < 0 ? 'text-red-400' : 'text-[#808080]'
-          }`}>
-            {currentScore}
-          </span>
-          <button
-            onClick={() => handleVote(-1)}
-            className={`p-1 rounded hover:bg-white/10 transition-colors ${
-              userVote === -1 ? 'text-red-400' : 'text-[#808080] hover:text-white'
-            }`}
-          >
-            <ChevronDown className="w-6 h-6" />
-          </button>
-        </div>
+    <article
+      onClick={handleOpen}
+      className="group cursor-pointer rounded-2xl border border-[#1F2933] bg-gradient-to-b from-[#020617]/90 to-black/90 p-4 shadow-[0_0_40px_rgba(15,23,42,0.7)] transition hover:border-[#4C51BF] hover:shadow-[0_0_40px_rgba(79,70,229,0.85)]"
+    >
+      {/* Meta info */}
+      <div className="mb-2 flex items-center gap-2 text-xs text-[#9CA3AF]">
+        <span className="rounded-full border border-[#27272A] bg-black/40 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-[#A5B4FC]">
+          {post.type || 'Discussion'}
+        </span>
+        <span className="font-mono text-[11px] text-[#E5E7EB]">
+          {post.author?.username || 'Anonymous'}
+        </span>
+        <span className="text-[#4B5563]">·</span>
+        <span className="text-[11px]">
+          {formatDate(post.createdAt || post.updatedAt || new Date())}
+        </span>
+        {post.viewCount != null && (
+          <>
+            <span className="text-[#4B5563]">·</span>
+            <span className="text-[11px]">{post.viewCount} views</span>
+          </>
+        )}
+      </div>
 
-        {/* Content Column */}
-        <div className="flex-1 min-w-0">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div className="flex-1 min-w-0">
-              <Link 
-                href={`/grid/forum/post/${post.slug}`}
-                className="block"
-                onClick={onClick}
-              >
-                <h3 className="text-lg font-semibold text-white hover:text-[#04D9FF] transition-colors line-clamp-2">
-                  {post.title || 'Untitled Post'}
-                </h3>
-              </Link>
-              
-              {/* Meta info */}
-              <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-[#808080]">
-                <span className={`px-2 py-0.5 rounded-full border ${typeConfig.color}`}>
-                  {typeConfig.icon} {typeConfig.label}
-                </span>
-                <span className="flex items-center gap-1">
-                  <img 
-                    src={post.author?.pfpUrl || '/default-avatar.png'} 
-                    alt="" 
-                    className="w-4 h-4 rounded-full"
-                  />
-                  {post.author?.username || 'Anonymous'}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {formatDate(post.createdAt)}
-                </span>
-                {post.viewCount > 0 && (
-                  <span className="flex items-center gap-1">
-                    <Eye className="w-3 h-3" />
-                    {post.viewCount}
-                  </span>
-                )}
-              </div>
-            </div>
+      {/* Title */}
+      <h3 className="mb-2 line-clamp-2 text-sm font-semibold text-[#F9FAFB]">
+        {post.title || 'Untitled Post'}
+      </h3>
 
-            {/* Bookmark button */}
-            <button
-              onClick={handleBookmark}
-              className={`p-2 rounded-lg transition-colors ${
-                isBookmarked 
-                  ? 'text-[#04D9FF] bg-[#04D9FF]/10' 
-                  : 'text-[#808080] hover:text-white hover:bg-white/5'
-              }`}
+      {/* Content preview */}
+      {post.content && (
+        <p className="mb-3 line-clamp-3 text-xs leading-relaxed text-[#D1D5DB]">
+          {post.content.slice(0, 200)}
+          {post.content.length > 200 && '...'}
+        </p>
+      )}
+
+      {/* Tags */}
+      {post.tags && post.tags.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {post.tags.map(tag => (
+            <span
+              key={tag}
+              className="rounded-full border border-[#111827] bg-[#020617] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[#6EE7B7]"
             >
-              <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
-            </button>
-          </div>
+              #{tag}
+            </span>
+          ))}
+        </div>
+      )}
 
-          {/* Content preview */}
-          {showContent && post.content && (
-            <p className="text-[#B0B0B0] text-sm line-clamp-2 mb-3">
-              {post.content.slice(0, 200)}
-              {post.content.length > 200 && '...'}
-            </p>
-          )}
-
-          {/* Tags */}
-          {post.tags && post.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-3">
-              {post.tags.slice(0, 5).map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 text-xs bg-white/5 text-[#808080] rounded-full hover:bg-white/10 cursor-pointer"
-                >
-                  #{tag}
-                </span>
-              ))}
-              {post.tags.length > 5 && (
-                <span className="px-2 py-0.5 text-xs text-[#808080]">
-                  +{post.tags.length - 5} more
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Footer stats */}
-          <div className="flex items-center gap-4 text-xs text-[#808080]">
-            <span className="flex items-center gap-1">
-              <MessageCircle className="w-4 h-4" />
-              {post.replyCount || post._count?.replies || 0} replies
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-1 text-xs text-[#6B7280]">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <TrendingUp className="h-3 w-3 text-[#22D3EE]" />
+            <span className="font-mono text-[11px] text-[#E5E7EB]">
+              {post.score ?? 0}
             </span>
           </div>
+          <div className="flex items-center gap-1">
+            <MessageCircle className="h-3 w-3" />
+            <span className="text-[11px]">{commentCount} replies</span>
+          </div>
         </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          className={cn(
+            'h-7 w-7 rounded-full border border-transparent text-[#6B7280] hover:border-[#4C51BF] hover:bg-black/60 hover:text-[#E5E7EB]',
+            post.isBookmarked && 'border-[#4C51BF] bg-black/60 text-[#E5E7EB]',
+          )}
+          onClick={handleBookmark}
+        >
+          <Bookmark
+            className={cn(
+              'h-3.5 w-3.5',
+              post.isBookmarked && 'fill-[#4C51BF] text-[#4C51BF]',
+            )}
+          />
+        </Button>
       </div>
     </article>
   );
-};
-
-export default ForumPostCard;
+}

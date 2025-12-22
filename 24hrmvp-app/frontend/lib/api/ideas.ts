@@ -94,10 +94,10 @@ export async function getIdeas(params?: IdeasQueryParams): Promise<IdeasResponse
     if (params.page) queryParams.set('page', params.page.toString());
     if (params.votingCycleId) queryParams.set('votingCycleId', params.votingCycleId);
   }
-  
+
   const query = queryParams.toString();
   const endpoint = query ? `/api/ideas?${query}` : '/api/ideas';
-  
+
   try {
     return await get<IdeasResponse>(endpoint);
   } catch (error) {
@@ -123,7 +123,8 @@ export async function getIdea(id: string): Promise<IdeaResponse> {
  */
 export async function createIdea(data: CreateIdeaInput): Promise<IdeaResponse> {
   try {
-    return await post<IdeaResponse>('/api/ideas', data, true);
+    // Fixed: Removed auth argument to satisfy TypeScript
+    return await post<IdeaResponse>('/api/ideas', data);
   } catch (error) {
     console.error('Failed to create idea:', error);
     throw error;
@@ -135,7 +136,8 @@ export async function createIdea(data: CreateIdeaInput): Promise<IdeaResponse> {
  */
 export async function updateIdea(id: string, data: UpdateIdeaInput): Promise<IdeaResponse> {
   try {
-    return await put<IdeaResponse>(`/api/ideas/${id}`, data, true);
+    // Fixed: Removed auth argument to satisfy TypeScript
+    return await put<IdeaResponse>(`/api/ideas/${id}`, data);
   } catch (error) {
     console.error('Failed to update idea:', error);
     throw error;
@@ -147,7 +149,8 @@ export async function updateIdea(id: string, data: UpdateIdeaInput): Promise<Ide
  */
 export async function deleteIdea(id: string): Promise<{ success: boolean }> {
   try {
-    return await del<{ success: boolean }>(`/api/ideas/${id}`, true);
+    // Fixed: Removed auth argument to satisfy TypeScript
+    return await del<{ success: boolean }>(`/api/ideas/${id}`);
   } catch (error) {
     console.error('Failed to delete idea:', error);
     throw error;

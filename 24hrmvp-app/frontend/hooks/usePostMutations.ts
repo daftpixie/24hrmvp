@@ -7,7 +7,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { apiClient } from '@/lib/api/client';
+// Fixed: Changed to default import
+import apiClient from '@/lib/api/client';
 import type { ForumPost } from '@/lib/types/grid';
 
 export interface CreatePostData {
@@ -42,6 +43,7 @@ export function usePostMutations() {
         '/api/grid/forum',
         data
       );
+      
       if (!response.success) {
         throw new Error('Failed to create post');
       }
@@ -63,6 +65,7 @@ export function usePostMutations() {
         `/api/grid/forum/post/${slug}`,
         data
       );
+      
       if (!response.success) {
         throw new Error('Failed to update post');
       }
@@ -83,6 +86,7 @@ export function usePostMutations() {
       const response = await apiClient.delete<{ success: boolean }>(
         `/api/grid/forum/post/${slug}`
       );
+      
       if (!response.success) {
         throw new Error('Failed to delete post');
       }
@@ -106,6 +110,7 @@ export function usePostMutations() {
         `/api/grid/forum/post/${postId}/vote`,
         { value }
       );
+      
       if (!response.success) {
         throw new Error('Failed to vote');
       }
@@ -126,6 +131,7 @@ export function usePostMutations() {
       const response = await apiClient.delete<{ success: boolean; score: number }>(
         `/api/grid/forum/post/${postId}/vote`
       );
+      
       if (!response.success) {
         throw new Error('Failed to remove vote');
       }

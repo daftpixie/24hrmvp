@@ -8,14 +8,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  MessageCircle, 
-  MessageSquare, 
-  Users, 
-  Trophy,
-  Radio,
-  LayoutGrid
-} from 'lucide-react';
+import { MessageCircle, MessageSquare, Users, Trophy, Radio, LayoutGrid } from 'lucide-react';
 
 interface GridHeaderProps {
   activeTab?: 'overview' | 'chat' | 'forum' | 'social' | 'leaderboard' | 'live';
@@ -35,50 +28,58 @@ export default function GridHeader({ activeTab }: GridHeaderProps) {
   
   // Determine active tab from pathname if not provided
   const currentTab = activeTab || tabs.find(tab => 
-    tab.href === pathname || 
-    (tab.id !== 'overview' && pathname?.startsWith(tab.href))
+    tab.href === pathname || (tab.id !== 'overview' && pathname?.startsWith(tab.href))
   )?.id || 'overview';
 
   return (
-    <div className="bg-[rgba(255,255,255,0.02)] border-b border-[rgba(4,217,255,0.1)]">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between py-4">
-          {/* Title */}
+    <div className="sticky top-16 z-40 w-full border-b border-white/10 bg-[#0B192A]/90 backdrop-blur-md">
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between py-4 gap-4">
+          
+          {/* Header Title */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[--neon-cyan] to-[--neon-purple] flex items-center justify-center">
-              <LayoutGrid className="w-5 h-5 text-white" />
+            <div className="p-2 rounded-lg bg-gradient-to-br from-neon-cyan/20 to-neon-blue/20 border border-neon-cyan/30 shadow-[0_0_15px_rgba(4,217,255,0.15)]">
+              <LayoutGrid className="w-6 h-6 text-neon-cyan" />
             </div>
             <div>
-              <h1 className="text-xl font-heading font-bold text-white">The Grid</h1>
-              <p className="text-xs text-[--text-secondary]">Community Hub</p>
+              <h1 className="text-xl font-display font-bold text-white tracking-wide">
+                The <span className="text-neon-cyan">Grid</span>
+              </h1>
+              <p className="text-xs text-text-secondary font-mono tracking-wider uppercase">Community Hub</p>
             </div>
           </div>
-        </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-hide">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = tab.id === currentTab;
-            
-            return (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-medium whitespace-nowrap transition-all ${
-                  isActive
-                    ? 'bg-[rgba(4,217,255,0.1)] text-[--neon-cyan] border-b-2 border-[--neon-cyan]'
-                    : 'text-[--text-secondary] hover:text-white hover:bg-[rgba(255,255,255,0.05)]'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-[--neon-cyan]' : ''}`} />
-                <span>{tab.label}</span>
-                {tab.id === 'live' && (
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                )}
-              </Link>
-            );
-          })}
+          {/* Navigation Tabs */}
+          <nav className="flex items-center gap-1 overflow-x-auto pb-2 md:pb-0 no-scrollbar mask-gradient-right">
+            {tabs.map((tab) => {
+              const isActive = currentTab === tab.id;
+              const Icon = tab.icon;
+              
+              return (
+                <Link
+                  key={tab.id}
+                  href={tab.href}
+                  className={`relative px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 group whitespace-nowrap ${
+                    isActive 
+                      ? 'text-white bg-white/5 border border-white/10 shadow-[0_0_10px_rgba(255,255,255,0.05)]' 
+                      : 'text-text-tertiary hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 transition-colors ${
+                    isActive ? 'text-neon-cyan' : 'group-hover:text-neon-cyan/70'
+                  }`} />
+                  <span className={`text-sm font-medium ${isActive ? 'font-heading' : 'font-body'}`}>
+                    {tab.label}
+                  </span>
+                  
+                  {/* Active Indicator Line */}
+                  {isActive && (
+                    <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-neon-cyan to-transparent opacity-80" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
       </div>
     </div>

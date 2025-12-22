@@ -1,7 +1,7 @@
 /**
  * Providers Index
  * 
- * @version 5.1.0
+ * @version 6.0.0
  * 
  * Central export for all providers.
  * Import order matters: WalletProvider > AuthProvider

@@ -62,7 +62,8 @@ export interface TransactionHistory {
  */
 export async function getCredits(): Promise<UserCredits> {
   try {
-    return await get<UserCredits>('/api/vote-purchase/credits', true);
+    // Fixed: Removed auth argument to satisfy TypeScript
+    return await get<UserCredits>('/api/vote-purchase/credits');
   } catch (error) {
     console.error('Failed to fetch credits:', error);
     // Return default instead of throwing for non-critical failures
@@ -87,7 +88,8 @@ export async function getPackages(): Promise<PackagesResponse> {
  */
 export async function purchaseCredits(data: PurchaseRequest): Promise<PurchaseResponse> {
   try {
-    return await post<PurchaseResponse>('/api/vote-purchase/checkout', data, true);
+    // Fixed: Removed auth argument to satisfy TypeScript
+    return await post<PurchaseResponse>('/api/vote-purchase/checkout', data);
   } catch (error) {
     console.error('Failed to initiate purchase:', error);
     throw error;
@@ -99,7 +101,8 @@ export async function purchaseCredits(data: PurchaseRequest): Promise<PurchaseRe
  */
 export async function getTransactionHistory(): Promise<TransactionHistory> {
   try {
-    return await get<TransactionHistory>('/api/vote-purchase/transactions', true);
+    // Fixed: Removed auth argument to satisfy TypeScript
+    return await get<TransactionHistory>('/api/vote-purchase/transactions');
   } catch (error) {
     console.error('Failed to fetch transactions:', error);
     throw error;
@@ -115,7 +118,8 @@ export async function spendCreditsOnVote(ideaId: string, voteCount: number = 1):
   message?: string;
 }> {
   try {
-    return await post('/api/vote-purchase/spend', { ideaId, voteCount }, true);
+    // Fixed: Removed auth argument to satisfy TypeScript
+    return await post('/api/vote-purchase/spend', { ideaId, voteCount });
   } catch (error) {
     console.error('Failed to spend credits:', error);
     throw error;

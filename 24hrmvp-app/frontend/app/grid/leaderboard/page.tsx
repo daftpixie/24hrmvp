@@ -2,13 +2,12 @@
 
 export const dynamic = 'force-dynamic'
 
-
 import ClientOnly from '@/components/ClientOnly';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 import { useState } from 'react';
 import { useLeaderboard } from '@/hooks/useGrid';
 import { useAuth } from '@/providers/AuthProvider';
-import { Trophy, Lightbulb, Vote, MessageSquare, Award, Loader2, AlertCircle, ChevronDown } from 'lucide-react';
+import { Trophy, Lightbulb, Vote, MessageSquare, Award, Loader2, AlertCircle, ChevronDown, User } from 'lucide-react';
 
 type MetricType = 'points' | 'submissions' | 'votes' | 'forum_score' | 'achievements';
 type TimeframeType = 'day' | 'week' | 'month' | 'year' | 'all';
@@ -32,6 +31,7 @@ function LeaderboardPageContent() {
   const { user } = useAuth();
   const [metric, setMetric] = useState<MetricType>('points');
   const [timeframe, setTimeframe] = useState<TimeframeType>('all');
+
   const { entries, loading, error } = useLeaderboard({ metric, timeframe, limit: 50 });
 
   const currentMetric = metrics.find(m => m.value === metric);
@@ -44,89 +44,118 @@ function LeaderboardPageContent() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-white flex items-center justify-center gap-3">
-          <Trophy className="w-8 h-8 text-[#FFD700]" />Leaderboard
+    <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 py-6">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-display font-bold text-white flex items-center justify-center gap-3">
+          <Trophy className="w-8 h-8 text-yellow-400" /> Leaderboard
         </h1>
-        <p className="text-[#808080] mt-1">Top contributors and community champions</p>
+        <p className="text-text-secondary mt-1">Top contributors and community champions</p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+      <div className="bg-surface-1/50 border border-white/10 rounded-xl p-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {metrics.map((m) => {
               const Icon = m.icon;
               return (
                 <button key={m.value} onClick={() => setMetric(m.value)} className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all ${metric === m.value ? 'bg-[#04D9FF]/10 border-[#04D9FF] text-[#04D9FF]' : 'bg-[#1E1E1E] border-white/10 text-[#808080] hover:border-white/30'}`}>
                   <Icon className="w-5 h-5" />
-                  <span className="text-xs font-medium">{m.label}</span>
+                  <span className="text-xs font-semibold">{m.label}</span>
                 </button>
               );
             })}
           </div>
-        </div>
-        <div className="relative">
-          <select value={timeframe} onChange={(e) => setTimeframe(e.target.value as TimeframeType)} className="appearance-none w-full md:w-40 px-4 py-3 bg-[#1E1E1E] border border-white/10 rounded-lg text-white pr-10 focus:outline-none focus:border-[#04D9FF]">
-            {timeframes.map((tf) => (
-              <option key={tf.value} value={tf.value}>{tf.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#808080] pointer-events-none" />
+
+          <div className="relative">
+            <select
+              value={timeframe}
+              onChange={(e) => setTimeframe(e.target.value as TimeframeType)}
+              className="appearance-none w-full md:w-40 px-4 py-3 bg-[#1E1E1E] border border-white/10 rounded-lg text-white pr-10 focus:outline-none focus:border-[#04D9FF]"
+            >
+              {timeframes.map((tf) => (
+                <option key={tf.value} value={tf.value}>{tf.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-3 text-red-400">
-          <AlertCircle className="w-5 h-5" />{error}
+        <div className="bg-red-900/50 border border-red-500 text-red-300 px-4 py-3 rounded-lg flex items-center gap-3">
+          <AlertCircle className="w-5 h-5" />
+          <span>Failed to fetch leaderboard: {error}</span>
         </div>
       )}
 
-      <div className="bg-[#1E1E1E]/60 border border-white/10 rounded-xl overflow-hidden">
-        <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-white/5 text-[#808080] text-sm font-medium">
-          <div className="col-span-1">Rank</div>
-          <div className="col-span-7">User</div>
-          <div className="col-span-4 text-right">{currentMetric?.label}</div>
-        </div>
-
-        {loading ? (
-          <div className="p-8 text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#04D9FF]" />
-            <p className="text-[#808080] mt-2">Loading rankings...</p>
-          </div>
-        ) : entries.length > 0 ? (
-          <div className="divide-y divide-white/5">
-            {entries.map((entry) => {
-              const isCurrentUser = user?.fid === entry.user.fid;
-              return (
-                <div key={entry.user.id} className={`grid grid-cols-12 gap-4 px-4 py-3 items-center ${isCurrentUser ? 'bg-[#04D9FF]/5' : 'hover:bg-white/5'}`}>
-                  <div className="col-span-1">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${getRankStyle(entry.rank)}`}>{entry.rank}</div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-white/10">
+              <th className="p-3 text-sm font-semibold text-text-secondary w-16">Rank</th>
+              <th className="p-3 text-sm font-semibold text-text-secondary">User</th>
+              <th className="p-3 text-sm font-semibold text-text-secondary text-right">{currentMetric?.label}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={3} className="text-center py-12 text-text-secondary">
+                  <div className="flex justify-center items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Loading rankings...</span>
                   </div>
-                  <div className="col-span-7 flex items-center gap-3">
-                    <img src={entry.user.pfpUrl || '/default-avatar.png'} alt="" className={`w-10 h-10 rounded-full border-2 ${entry.rank <= 3 ? 'border-[#FFD700]' : 'border-white/20'}`} />
-                    <div>
-                      <p className={`font-medium ${isCurrentUser ? 'text-[#04D9FF]' : 'text-white'}`}>{entry.user.displayName || entry.user.username}{isCurrentUser && <span className="ml-2 text-xs">(You)</span>}</p>
-                      <p className="text-[#808080] text-sm">@{entry.user.username}</p>
-                    </div>
+                </td>
+              </tr>
+            ) : entries.length > 0 ? (
+              entries.map((entry) => {
+                const isCurrentUser = user?.fid === entry.user.fid;
+                return (
+                  <tr key={entry.user.fid} className={`border-b border-white/5 ${isCurrentUser ? 'bg-neon-cyan/5' : ''}`}>
+                    <td className="p-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${getRankStyle(entry.rank)}`}>
+                        {entry.rank}
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-3">
+                        {entry.user.pfpUrl ? (
+                          <img src={entry.user.pfpUrl} alt={entry.user.username} className="w-10 h-10 rounded-full" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                            <User className="w-5 h-5 text-text-secondary" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-semibold text-text-primary flex items-center gap-2">
+                            {entry.user.displayName || entry.user.username}
+                            {isCurrentUser && <span className="text-xs bg-neon-cyan text-black px-2 py-0.5 rounded-full font-bold">You</span>}
+                          </div>
+                          <div className="text-sm text-text-tertiary">@{entry.user.username}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3 text-right font-mono text-lg font-bold text-neon-cyan">{entry.score.toLocaleString()}</td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={3} className="text-center py-12 text-text-secondary">
+                  <div className="flex flex-col items-center gap-2">
+                    <Trophy className="w-10 h-10 text-text-tertiary" />
+                    <span>No rankings yet</span>
                   </div>
-                  <div className="col-span-4 text-right">
-                    <span className={`font-mono font-bold text-lg ${entry.rank === 1 ? 'text-[#FFD700]' : entry.rank === 2 ? 'text-gray-300' : entry.rank === 3 ? 'text-amber-600' : 'text-[#04D9FF]'}`}>{entry.score.toLocaleString()}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-8 text-center text-[#808080]">
-            <Trophy className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>No rankings yet</p>
-          </div>
-        )}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
+
 export default function LeaderboardPage() {
   return (
     <ClientOnly fallback={<LoadingSkeleton />}>

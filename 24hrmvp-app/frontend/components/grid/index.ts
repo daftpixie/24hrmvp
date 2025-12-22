@@ -4,12 +4,10 @@
 // FIXED: Updated type imports to match available exports
 // ============================================
 
-// Social Components
-export { SocialWall } from './SocialWall';
+export { default as SocialWall } from './SocialWall';
+export { default as ForumPostCard } from './ForumPostCard';
+export { default as ThreadedDiscussion } from './ThreadedDiscussion';
 
-// Forum Components
-export { ForumPostCard } from './ForumPostCard';
-export { ThreadedDiscussion } from './ThreadedDiscussion';
 
 // Re-export types for convenience
 export type {

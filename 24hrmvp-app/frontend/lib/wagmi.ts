@@ -1,19 +1,19 @@
 /**
  * Wagmi Configuration for 24HRMVP
  * 
- * @version 5.1.0 - Updated for RainbowKit 2.x + Wagmi 2.x
+ * @version 6.0.0 - Fixed double initialization issue
  * 
- * This file exports the wagmi config used throughout the app.
- * The config is created using RainbowKit's getDefaultConfig for
- * seamless integration with the RainbowKit UI.
+ * CRITICAL: This config is created ONCE and reused.
+ * The getDefaultConfig call is memoized to prevent WalletConnect
+ * from being initialized multiple times.
  */
 
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { mainnet, base, polygon, arbitrum, optimism } from 'wagmi/chains';
-import { http } from 'wagmi';
+import { http, type Config } from 'wagmi';
 
 // ============================================
-// CONFIGURATION CONSTANTS
+// SUPPORTED CHAINS
 // ============================================
 
 export const SUPPORTED_CHAINS = [
@@ -24,12 +24,15 @@ export const SUPPORTED_CHAINS = [
   optimism,
 ] as const;
 
-export const WALLETCONNECT_PROJECT_ID = 
+// ============================================
+// CONFIGURATION CONSTANTS
+// ============================================
+
+const WALLETCONNECT_PROJECT_ID = 
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '5ac1003d6254111216201e5042cb4675';
 
 const APP_NAME = '24HRMVP';
 const APP_DESCRIPTION = 'Community-driven 24-hour MVP development platform';
-const APP_ICON = 'https://24hrmvp.xyz/icon.png';
 
 // ============================================
 // TRANSPORT CONFIGURATION
@@ -44,31 +47,60 @@ const transports = {
 };
 
 // ============================================
-// APP URL HELPER
+// SINGLETON CONFIG PATTERN
 // ============================================
 
-function getAppUrl(): string {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
+let _config: Config | null = null;
+
+/**
+ * Get or create the wagmi config
+ * Uses singleton pattern to prevent multiple WalletConnect initializations
+ */
+function getOrCreateConfig(): Config {
+  if (_config) {
+    return _config;
   }
-  return process.env.NEXT_PUBLIC_APP_URL || 'https://24hrmvp.xyz';
+
+  // Determine app URL
+  const appUrl = typeof window !== 'undefined' 
+    ? window.location.origin 
+    : (process.env.NEXT_PUBLIC_APP_URL || 'https://24hrmvp.xyz');
+
+  // Determine icon URL
+  const appIcon = typeof window !== 'undefined'
+    ? `${window.location.origin}/icon.png`
+    : 'https://24hrmvp.xyz/icon.png';
+
+  // Create config once
+  _config = getDefaultConfig({
+    appName: APP_NAME,
+    appDescription: APP_DESCRIPTION,
+    appUrl,
+    appIcon,
+    projectId: WALLETCONNECT_PROJECT_ID,
+    chains: SUPPORTED_CHAINS,
+    transports,
+    ssr: true,
+  });
+
+  return _config;
 }
 
 // ============================================
-// WAGMI CONFIG (using RainbowKit's getDefaultConfig)
+// EXPORTS
 // ============================================
 
-// Note: getDefaultConfig creates a properly configured wagmi config
-// with all necessary connectors for RainbowKit (WalletConnect, Coinbase, etc.)
-export const config = getDefaultConfig({
-  appName: APP_NAME,
-  appDescription: APP_DESCRIPTION,
-  appUrl: getAppUrl(),
-  appIcon: APP_ICON,
-  projectId: WALLETCONNECT_PROJECT_ID,
-  chains: SUPPORTED_CHAINS,
-  transports,
-  ssr: true, // Enable SSR support
-});
+// Export the config getter (creates on first access)
+export const config = getOrCreateConfig();
+
+// Export chain utilities
+export function getChainName(chainId: number): string {
+  const chain = SUPPORTED_CHAINS.find(c => c.id === chainId);
+  return chain?.name || 'Unknown';
+}
+
+export function isSupportedChain(chainId: number): boolean {
+  return SUPPORTED_CHAINS.some(c => c.id === chainId);
+}
 
 export default config;
