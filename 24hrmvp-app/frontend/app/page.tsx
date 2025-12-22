@@ -206,7 +206,7 @@ function HomeContent() {
                 className="block relative aspect-video rounded-xl overflow-hidden border border-white/10 shadow-2xl transform transition-all duration-500 hover:scale-[1.02] hover:shadow-neon-purple/20 group/card"
               >
                 <Image
-                  src="/24HRMVP_Cypher_Genesis.png"
+                  src="/24HRMVP_Cypher_Genesis.PNG"
                   alt="24HRMVP Cypher Genesis"
                   fill
                   className="object-cover group-hover/card:scale-110 transition-transform duration-500"
