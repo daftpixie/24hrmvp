@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSocialFeed } from '@/hooks/useGrid';
-import { Heart, MessageCircle, Repeat2, ExternalLink, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, ExternalLink } from 'lucide-react';
 import type { SocialPost, SocialPlatform } from '@/lib/types/grid';
 
 const platformColors: Record<SocialPlatform, string> = {
@@ -26,7 +26,7 @@ interface SocialWallProps {
 
 export function SocialWall({ channelId, limit = 20 }: SocialWallProps) {
   const [platform, setPlatform] = useState<SocialPlatform | undefined>(undefined);
-  const { posts, loading, error, refresh } = useSocialFeed({
+  const { posts, loading, error } = useSocialFeed({
     platform,
     channelId,
     limit,
@@ -55,6 +55,9 @@ export function SocialWall({ channelId, limit = 20 }: SocialWallProps) {
     );
   }
 
+  // Cast posts to SocialPost[] from types/grid
+  const typedPosts = posts as SocialPost[];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -75,7 +78,7 @@ export function SocialWall({ channelId, limit = 20 }: SocialWallProps) {
         ))}
       </div>
 
-      {loading && posts.length === 0 ? (
+      {loading && typedPosts.length === 0 ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="p-4 bg-[#1E1E1E]/60 border border-white/10 rounded-xl animate-pulse">
@@ -89,41 +92,52 @@ export function SocialWall({ channelId, limit = 20 }: SocialWallProps) {
             </div>
           ))}
         </div>
-      ) : posts.length > 0 ? (
+      ) : typedPosts.length > 0 ? (
         <React.Fragment>
           <div className="space-y-4">
-            {posts.map((post) => {
+            {typedPosts.map((post) => {
               const colors = platformColors[post.platform] || platformColors.FARCASTER;
               const icon = platformIcons[post.platform] || '🟣';
+              
+              // Safely access optional properties
+              const avatarUrl = post.authorAvatar;
+              const displayName = post.authorDisplayName || post.authorUsername || 'Anonymous';
+              const username = post.authorUsername;
+              const channel = post.channelName;
+              const likesCount = post.likes ?? 0;
+              const repostsCount = post.reposts ?? 0;
+              const repliesCount = post.replies ?? 0;
+              const linkUrl = post.externalUrl || post.url;
+              
               return (
                 <article key={post.id} className="p-4 bg-[#1E1E1E]/60 border border-white/10 rounded-xl hover:border-[#04D9FF]/20 transition-colors">
                   <div className="flex items-start gap-3">
-                    {(post as any).authorAvatar ? (
-                      <img src={(post as any).authorAvatar} alt="" className="w-10 h-10 rounded-full border border-white/20" />
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="" className="w-10 h-10 rounded-full border border-white/20" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#04D9FF] to-[#FB48C4] flex items-center justify-center text-white font-bold">
-                        {(post.authorUsername || 'U')[0].toUpperCase()}
+                        {displayName[0].toUpperCase()}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-white truncate">{(post as any).authorDisplayName || post.authorUsername || 'Anonymous'}</span>
-                        {post.authorUsername && <span className="text-[#808080] text-sm">@{post.authorUsername}</span>}
+                        <span className="font-semibold text-white truncate">{displayName}</span>
+                        {username && <span className="text-[#808080] text-sm">@{username}</span>}
                         <span className={'px-1.5 py-0.5 rounded text-xs border ' + colors}>{icon} {post.platform}</span>
                         <span className="text-[#808080] text-xs">{formatDate(post.timestamp)}</span>
                       </div>
                       <p className="text-white mt-2 whitespace-pre-wrap break-words">{post.content}</p>
-                      {(post as any).channelName && (
+                      {channel && (
                         <div className="mt-2">
-                          <span className="text-[#04D9FF] text-sm">#{(post as any).channelName}</span>
+                          <span className="text-[#04D9FF] text-sm">#{channel}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-6 mt-3 text-[#808080]">
-                        <span className="flex items-center gap-1.5"><Heart className="w-4 h-4" />{(post as any).likes || 0}</span>
-                        <span className="flex items-center gap-1.5"><Repeat2 className="w-4 h-4" />{(post as any).reposts || 0}</span>
-                        <span className="flex items-center gap-1.5"><MessageCircle className="w-4 h-4" />{(post as any).replies || 0}</span>
-                        {((post as any).externalUrl || post.url) && (
-                          <a href={(post as any).externalUrl || post.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-[#04D9FF] ml-auto">
+                        <span className="flex items-center gap-1.5"><Heart className="w-4 h-4" />{likesCount}</span>
+                        <span className="flex items-center gap-1.5"><Repeat2 className="w-4 h-4" />{repostsCount}</span>
+                        <span className="flex items-center gap-1.5"><MessageCircle className="w-4 h-4" />{repliesCount}</span>
+                        {linkUrl && (
+                          <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-[#04D9FF] ml-auto">
                             <ExternalLink className="w-4 h-4" />
                             <span className="text-sm">View</span>
                           </a>

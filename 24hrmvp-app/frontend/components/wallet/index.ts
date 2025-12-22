@@ -1,7 +1,7 @@
 /**
  * Wallet Components Index
  * 
- * @version 4.0.0 - RainbowKit migration
+ * @version 5.1.0 - Updated for WagmiProvider support
  */
 
 export { default as AuthButton } from './AuthButton';

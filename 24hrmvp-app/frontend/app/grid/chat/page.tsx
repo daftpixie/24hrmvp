@@ -1,432 +1,412 @@
-﻿'use client';
-
-// PRODUCTION FIX: Force dynamic rendering for auth context
-// This prevents static generation errors with useAuth hook
-export const dynamic = 'force-dynamic'
-
-
 // ============================================
-// 24HRMVP - GRID CHAT PAGE (FIXED v2)
+// 24HRMVP - CHAT ROOMS LIST PAGE
 // File: frontend/app/grid/chat/page.tsx
-// Fix: Removed GridHeader (already in layout.tsx)
+// FIXED: Use getToken helper instead of token from useAuth
 // ============================================
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '@/providers/AuthProvider';
-import ClientOnly from '@/components/ClientOnly';
-import LoadingSkeleton from '@/components/LoadingSkeleton';
-import { getApiUrl } from '@/lib/config';
+'use client';
+
+export const dynamic = 'force-dynamic';
+
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { 
-  MessageCircle, 
-  Send, 
+  ArrowLeft, 
+  MessageSquare, 
   Users, 
   Hash, 
+  Plus, 
+  Search, 
   Loader2,
-  AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Globe,
+  Lock
 } from 'lucide-react';
+import { useAuth, getToken } from '@/providers/AuthProvider';
+import { getApiUrl } from '@/lib/config';
+import ClientOnly from '@/components/ClientOnly';
+import LoadingSkeleton from '@/components/LoadingSkeleton';
+
+// ============================================
+// TYPES
+// ============================================
 
 interface ChatRoom {
   id: string;
   name: string;
   slug: string;
-  description?: string;
-  isPrivate: boolean;
-  _count?: {
-    messages: number;
-    participants: number;
-  };
+  description: string | null;
+  type: 'PUBLIC' | 'PRIVATE' | 'DIRECT' | 'IDEA';
+  memberCount: number;
+  messageCount: number;
+  lastMessageAt: string | null;
+  createdAt: string;
 }
 
-interface ChatMessage {
-  id: string;
-  content: string;
-  createdAt: string;
-  user: {
-    id: string;
-    username: string;
-    displayName?: string;
-    pfpUrl?: string;
-  };
-}
+// Room icons mapping
+const roomIcons: Record<string, string> = {
+  general: '💬',
+  ideas: '💡',
+  development: '🔧',
+  builders: '🔧',
+  announcements: '📢',
+  help: '❓',
+};
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 
 function ChatPageContent() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
-  const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [loadingRooms, setLoadingRooms] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [filteredRooms, setFilteredRooms] = useState<ChatRoom[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'PUBLIC' | 'PRIVATE'>('all');
 
-  // Scroll to bottom of messages
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // ============================================
+  // FETCH ROOMS
+  // ============================================
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Fetch chat rooms
   const fetchRooms = useCallback(async () => {
     try {
-      setLoadingRooms(true);
+      setLoading(true);
       setError(null);
       
       const apiUrl = getApiUrl();
+      const token = getToken();
       
-      const response = await fetch(`${apiUrl}/api/chat/rooms`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`${apiUrl}/api/grid/chat/rooms`, {
+        headers,
         credentials: 'include',
       });
-
+      
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error('Failed to fetch chat rooms');
       }
-
+      
       const data = await response.json();
       
+      let roomsData: ChatRoom[] = [];
       if (data.success && data.rooms) {
-        setRooms(data.rooms);
-        // Auto-select first room if none selected
-        if (!selectedRoom && data.rooms.length > 0) {
-          setSelectedRoom(data.rooms[0]);
-        }
+        roomsData = data.rooms;
+      } else if (Array.isArray(data.rooms)) {
+        roomsData = data.rooms;
+      } else if (Array.isArray(data)) {
+        roomsData = data;
       }
+      
+      setRooms(roomsData);
+      setFilteredRooms(roomsData);
     } catch (err) {
-      console.error('Error fetching chat rooms:', err);
-      setError('Failed to load chat rooms');
+      console.error('Error fetching rooms:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load rooms');
     } finally {
-      setLoadingRooms(false);
-    }
-  }, [selectedRoom]);
-
-  // Fetch messages for selected room
-  const fetchMessages = useCallback(async (roomId: string, silent = false) => {
-    try {
-      if (!silent) {
-        setLoadingMessages(true);
-      }
-      
-      const apiUrl = getApiUrl();
-      
-      const response = await fetch(`${apiUrl}/api/chat/rooms/${roomId}/messages`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.success && data.messages) {
-        setMessages(data.messages);
-      }
-    } catch (err) {
-      console.error('Error fetching messages:', err);
-      if (!silent) {
-        setError('Failed to load messages');
-      }
-    } finally {
-      setLoadingMessages(false);
+      setLoading(false);
     }
   }, []);
 
-  // Send a message
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedRoom || !isAuthenticated || sending) return;
-
-    try {
-      setSending(true);
-      
-      const apiUrl = getApiUrl();
-      const token = typeof window !== 'undefined' 
-        ? (sessionStorage.getItem('24hrmvp_access_token') || localStorage.getItem('farcaster_token'))
-        : null;
-
-      if (!token) {
-        setError('Please sign in to send messages');
-        return;
-      }
-
-      const response = await fetch(`${apiUrl}/api/chat/rooms/${selectedRoom.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify({ content: newMessage.trim() }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setNewMessage('');
-        // Refresh messages
-        fetchMessages(selectedRoom.id, true);
-      }
-    } catch (err: any) {
-      console.error('Error sending message:', err);
-      setError(err.message || 'Failed to send message');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  // Initial load
   useEffect(() => {
     fetchRooms();
   }, [fetchRooms]);
 
-  // Load messages when room changes
+  // ============================================
+  // FILTER ROOMS
+  // ============================================
+
   useEffect(() => {
-    if (selectedRoom) {
-      fetchMessages(selectedRoom.id);
-      
-      // Set up polling for new messages (every 5 seconds)
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-      pollIntervalRef.current = setInterval(() => {
-        fetchMessages(selectedRoom.id, true);
-      }, 5000);
+    let filtered = [...rooms];
+    
+    // Filter by type
+    if (filterType !== 'all') {
+      filtered = filtered.filter(room => room.type === filterType);
     }
-
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-    };
-  }, [selectedRoom, fetchMessages]);
-
-  // Handle Enter key
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(room => 
+        room.name.toLowerCase().includes(query) ||
+        room.description?.toLowerCase().includes(query)
+      );
     }
-  };
+    
+    setFilteredRooms(filtered);
+  }, [rooms, searchQuery, filterType]);
 
-  const formatTime = (dateString: string) => {
+  // ============================================
+  // FORMAT DATE
+  // ============================================
+
+  const formatLastActivity = (dateString: string | null) => {
+    if (!dateString) return 'No activity';
+    
     const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    
+    const diffHours = Math.floor(diffMs / 3600000);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
   };
 
-  return (
-    <div className="max-w-7xl mx-auto p-4">
-      {error && (
-        <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400" />
-          <span className="text-red-400">{error}</span>
-          <button 
-            onClick={() => { setError(null); fetchRooms(); }}
-            className="ml-auto text-red-400 hover:text-red-300"
+  // ============================================
+  // LOADING STATE
+  // ============================================
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <LoadingSkeleton className="h-12 w-48 mb-6" />
+        <LoadingSkeleton className="h-12 w-full mb-4" />
+        <div className="grid gap-4">
+          {[1, 2, 3, 4, 5].map(i => (
+            <LoadingSkeleton key={i} className="h-24" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
+  // ERROR STATE
+  // ============================================
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="text-center py-16 px-8 bg-[rgba(255,255,255,0.03)] rounded-xl border border-red-500/30">
+          <MessageSquare className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Error Loading Rooms</h2>
+          <p className="text-[#808080] mb-6">{error}</p>
+          <button
+            onClick={fetchRooms}
+            className="px-6 py-3 bg-[#04D9FF] text-black font-semibold rounded-lg hover:bg-[#04D9FF]/80 transition-colors inline-flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
+            Retry
           </button>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-280px)]">
-        {/* Room List */}
-        <div className="lg:col-span-1 bg-[rgba(255,255,255,0.03)] rounded-2xl border border-[rgba(4,217,255,0.1)] overflow-hidden">
-          <div className="p-4 border-b border-[rgba(255,255,255,0.1)]">
-            <h2 className="font-heading font-bold text-white flex items-center gap-2">
-              <Hash className="w-5 h-5 text-[--neon-cyan]" />
-              Chat Rooms
-            </h2>
+  // ============================================
+  // MAIN RENDER
+  // ============================================
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <Link
+          href="/grid"
+          className="inline-flex items-center gap-2 text-[#808080] hover:text-[#04D9FF] transition-colors mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Grid
+        </Link>
+        
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Chat Rooms</h1>
+            <p className="text-[#808080]">
+              Join conversations with the 24HRMVP community
+            </p>
           </div>
           
-          <div className="overflow-y-auto h-[calc(100%-60px)]">
-            {loadingRooms ? (
-              <div className="p-4 space-y-2">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-12 bg-[rgba(255,255,255,0.05)] rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : rooms.length === 0 ? (
-              <div className="p-4 text-center text-[--text-secondary]">
-                No chat rooms available
-              </div>
-            ) : (
-              <div className="p-2 space-y-1">
-                {rooms.map((room) => (
-                  <button
-                    key={room.id}
-                    onClick={() => setSelectedRoom(room)}
-                    className={`w-full p-3 rounded-xl text-left transition-all ${
-                      selectedRoom?.id === room.id
-                        ? 'bg-[rgba(4,217,255,0.1)] border border-[--neon-cyan]'
-                        : 'hover:bg-[rgba(255,255,255,0.05)]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Hash className={`w-4 h-4 ${
-                        selectedRoom?.id === room.id ? 'text-[--neon-cyan]' : 'text-[--text-secondary]'
-                      }`} />
-                      <span className={`font-medium ${
-                        selectedRoom?.id === room.id ? 'text-white' : 'text-[--text-secondary]'
-                      }`}>
-                        {room.name}
-                      </span>
-                    </div>
-                    {room.description && (
-                      <p className="mt-1 text-xs text-[--text-tertiary] truncate pl-6">
-                        {room.description}
-                      </p>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {user && (
+            <Link
+              href="/grid/chat/create"
+              className="px-4 py-2 bg-[#04D9FF] text-black font-semibold rounded-lg hover:bg-[#04D9FF]/80 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Create Room
+            </Link>
+          )}
         </div>
+      </div>
 
-        {/* Chat Area */}
-        <div className="lg:col-span-3 bg-[rgba(255,255,255,0.03)] rounded-2xl border border-[rgba(4,217,255,0.1)] flex flex-col overflow-hidden">
-          {/* Chat Header */}
-          <div className="p-4 border-b border-[rgba(255,255,255,0.1)] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <MessageCircle className="w-5 h-5 text-[--neon-cyan]" />
-              <div>
-                <h3 className="font-heading font-bold text-white">
-                  {selectedRoom?.name || 'Select a room'}
-                </h3>
-                {selectedRoom?.description && (
-                  <p className="text-xs text-[--text-secondary]">{selectedRoom.description}</p>
-                )}
-              </div>
-            </div>
-            {selectedRoom && (
-              <div className="flex items-center gap-2 text-[--text-secondary]">
-                <Users className="w-4 h-4" />
-                <span className="text-sm">{selectedRoom._count?.participants || 0}</span>
-              </div>
-            )}
-          </div>
+      {/* Search & Filters */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        {/* Search */}
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#808080]" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search rooms..."
+            className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-[#808080] focus:border-[#04D9FF] focus:outline-none transition-colors"
+          />
+        </div>
+        
+        {/* Type Filter */}
+        <div className="flex gap-2">
+          {(['all', 'PUBLIC', 'PRIVATE'] as const).map((type) => (
+            <button
+              key={type}
+              onClick={() => setFilterType(type)}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                filterType === type
+                  ? 'bg-[#04D9FF] text-black'
+                  : 'bg-white/5 text-[#808080] hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {type === 'all' ? 'All' : type === 'PUBLIC' ? 'Public' : 'Private'}
+            </button>
+          ))}
+        </div>
+        
+        {/* Refresh */}
+        <button
+          onClick={fetchRooms}
+          className="p-3 bg-white/5 border border-white/10 rounded-lg text-[#808080] hover:text-[#04D9FF] hover:border-[#04D9FF]/50 transition-colors"
+        >
+          <RefreshCw className="w-5 h-5" />
+        </button>
+      </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {loadingMessages ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="w-8 h-8 animate-spin text-[--neon-cyan]" />
-              </div>
-            ) : !selectedRoom ? (
-              <div className="flex items-center justify-center h-full text-[--text-secondary]">
-                Select a room to start chatting
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-[--text-secondary]">
-                No messages yet. Be the first to say something!
-              </div>
-            ) : (
-              messages.map((message) => (
-                <div 
-                  key={message.id} 
-                  className={`flex gap-3 ${
-                    message.user.id === user?.id ? 'flex-row-reverse' : ''
-                  }`}
-                >
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-[rgba(4,217,255,0.2)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {message.user.pfpUrl ? (
-                      <img 
-                        src={message.user.pfpUrl} 
-                        alt={message.user.username}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-[--neon-cyan] font-bold">
-                        {(message.user.displayName || message.user.username || '?')[0].toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+      {/* Room Stats */}
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+          <p className="text-2xl font-bold text-[#04D9FF]">{rooms.length}</p>
+          <p className="text-sm text-[#808080]">Total Rooms</p>
+        </div>
+        <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+          <p className="text-2xl font-bold text-[#04D9FF]">
+            {rooms.filter(r => r.type === 'PUBLIC').length}
+          </p>
+          <p className="text-sm text-[#808080]">Public</p>
+        </div>
+        <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+          <p className="text-2xl font-bold text-[#04D9FF]">
+            {rooms.reduce((sum, r) => sum + r.memberCount, 0)}
+          </p>
+          <p className="text-sm text-[#808080]">Total Members</p>
+        </div>
+        <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+          <p className="text-2xl font-bold text-[#04D9FF]">
+            {rooms.reduce((sum, r) => sum + r.messageCount, 0)}
+          </p>
+          <p className="text-sm text-[#808080]">Messages</p>
+        </div>
+      </div>
 
-                  {/* Message Content */}
-                  <div className={`max-w-[70%] ${
-                    message.user.id === user?.id ? 'text-right' : ''
-                  }`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-white">
-                        {message.user.displayName || message.user.username}
-                      </span>
-                      <span className="text-xs text-[--text-tertiary]">
-                        {formatTime(message.createdAt)}
-                      </span>
+      {/* Room List */}
+      {filteredRooms.length === 0 ? (
+        <div className="text-center py-16 px-8 bg-[rgba(255,255,255,0.03)] rounded-xl border border-[rgba(4,217,255,0.1)]">
+          <MessageSquare className="w-12 h-12 text-[#04D9FF]/50 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">No Rooms Found</h2>
+          <p className="text-[#808080]">
+            {searchQuery ? 'Try a different search term' : 'No chat rooms available yet'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {filteredRooms.map((room, index) => (
+            <motion.div
+              key={room.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Link href={`/grid/chat/${room.slug}`}>
+                <div className="group p-5 bg-white/5 rounded-xl border border-white/10 hover:border-[#04D9FF]/50 hover:bg-[#04D9FF]/5 transition-all cursor-pointer">
+                  <div className="flex items-start gap-4">
+                    {/* Room Icon */}
+                    <div className="w-12 h-12 rounded-lg bg-[#04D9FF]/10 flex items-center justify-center text-2xl flex-shrink-0">
+                      {roomIcons[room.slug] || <Hash className="w-6 h-6 text-[#04D9FF]" />}
                     </div>
-                    <div className={`p-3 rounded-2xl ${
-                      message.user.id === user?.id
-                        ? 'bg-[--neon-cyan] text-[--bg-deepest]'
-                        : 'bg-[rgba(255,255,255,0.1)] text-white'
-                    }`}>
-                      {message.content}
+                    
+                    {/* Room Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-white group-hover:text-[#04D9FF] transition-colors truncate">
+                          {room.name}
+                        </h3>
+                        {room.type === 'PRIVATE' ? (
+                          <Lock className="w-4 h-4 text-[#808080] flex-shrink-0" />
+                        ) : (
+                          <Globe className="w-4 h-4 text-[#808080] flex-shrink-0" />
+                        )}
+                      </div>
+                      
+                      {room.description && (
+                        <p className="text-sm text-[#808080] line-clamp-2 mb-2">
+                          {room.description}
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center gap-4 text-xs text-[#808080]">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3.5 h-3.5" />
+                          {room.memberCount} {room.memberCount === 1 ? 'member' : 'members'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          {room.messageCount} {room.messageCount === 1 ? 'message' : 'messages'}
+                        </span>
+                        <span>
+                          {formatLastActivity(room.lastMessageAt)}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Join Arrow */}
+                    <div className="text-[#808080] group-hover:text-[#04D9FF] transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                   </div>
                 </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Message Input */}
-          <div className="p-4 border-t border-[rgba(255,255,255,0.1)]">
-            {!isAuthenticated ? (
-              <div className="text-center text-[--text-secondary] py-2">
-                Please sign in to send messages
-              </div>
-            ) : (
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder={selectedRoom ? `Message #${selectedRoom.name}` : 'Select a room'}
-                  disabled={!selectedRoom || sending}
-                  className="flex-1 px-4 py-3 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-xl text-white placeholder-[--text-tertiary] focus:outline-none focus:border-[--neon-cyan] disabled:opacity-50"
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={!selectedRoom || !newMessage.trim() || sending}
-                  className="px-4 py-3 bg-[--neon-cyan] text-[--bg-deepest] rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {sending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
+              </Link>
+            </motion.div>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-export default function GridChatPage() {
+// ============================================
+// EXPORT WITH CLIENT WRAPPER
+// ============================================
+
+export default function ChatPage() {
   return (
-    <ClientOnly fallback={<LoadingSkeleton />}>
+    <ClientOnly fallback={
+      <div className="max-w-4xl mx-auto p-6">
+        <LoadingSkeleton className="h-12 w-48 mb-6" />
+        <LoadingSkeleton className="h-12 w-full mb-4" />
+        <div className="grid gap-4">
+          {[1, 2, 3, 4, 5].map(i => (
+            <LoadingSkeleton key={i} className="h-24" />
+          ))}
+        </div>
+      </div>
+    }>
       <ChatPageContent />
     </ClientOnly>
   );

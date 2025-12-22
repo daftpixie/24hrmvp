@@ -2,8 +2,29 @@
 
 import React, { useState } from 'react';
 import { useForumThread, usePostMutations } from '@/hooks/useGrid';
-import type { ForumPost, ForumComment } from '@/lib/types/grid';
+import type { ForumPost } from '@/lib/api/grid';
 import { ChevronUp, ChevronDown, MessageCircle, Reply, Loader2, AlertCircle } from 'lucide-react';
+
+// Local ForumComment type that matches what useForumThread returns
+interface ForumComment {
+  id: string;
+  content: string;
+  author: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    pfpUrl: string | null;
+  };
+  createdAt: string;
+  updatedAt: string;
+  upvotes: number;
+  downvotes: number;
+  score: number;
+  parentId: string | null;
+  replyCount?: number;
+  replies?: ForumComment[];
+  userVote?: number;
+}
 
 interface ThreadedDiscussionProps {
   slug: string;
@@ -39,7 +60,7 @@ export function ThreadedDiscussion({ slug }: ThreadedDiscussionProps) {
 
   const renderReply = (reply: ForumComment, depth: number = 0) => {
     const maxDepth = 4;
-    const indentClass = depth > 0 ? 'ml-' + Math.min(depth * 4, 16) : '';
+    const indentClass = depth > 0 ? `ml-${Math.min(depth * 4, 16)}` : '';
     
     return (
       <div key={reply.id} className={indentClass}>
@@ -105,6 +126,13 @@ export function ThreadedDiscussion({ slug }: ThreadedDiscussionProps) {
                       Post Reply
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Render nested replies */}
+              {reply.replies && reply.replies.length > 0 && depth < maxDepth && (
+                <div className="mt-3 space-y-2">
+                  {reply.replies.map((nestedReply) => renderReply(nestedReply, depth + 1))}
                 </div>
               )}
             </div>
@@ -192,7 +220,7 @@ export function ThreadedDiscussion({ slug }: ThreadedDiscussionProps) {
 
       {comments.length > 0 ? (
         <div className="space-y-2">
-          {comments.map((reply) => renderReply(reply))}
+          {comments.map((reply) => renderReply(reply as ForumComment))}
         </div>
       ) : (
         <div className="text-center py-8 text-[#808080]">

@@ -1,155 +1,100 @@
 // ============================================
-// 24HRMVP - CENTRALIZED CONFIGURATION
+// 24HRMVP - CLIENT CONFIGURATION
 // File: frontend/lib/config.ts
-// Single source of truth for all URLs and config
-// 
-// CRITICAL: This file must NEVER return undefined for API_URL
+// Centralized configuration for API and WebSocket URLs
 // ============================================
 
-// Hardcoded production URL - NEVER undefined
-const PRODUCTION_API_URL = 'https://api.24hrmvp.xyz';
-const PRODUCTION_WS_URL = 'wss://api.24hrmvp.xyz';
-const PRODUCTION_APP_URL = 'https://24hrmvp.xyz';
-
 /**
- * Get the API URL with bulletproof fallback logic
- * CRITICAL: Next.js bakes NEXT_PUBLIC_* vars at BUILD time, not runtime
- * This function MUST always return a valid URL string, never undefined
+ * Get the API base URL
+ * Uses NEXT_PUBLIC_API_URL environment variable in production
+ * Falls back to localhost for development
  */
 export function getApiUrl(): string {
-  // 1. Try environment variable first
-  const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (envUrl && envUrl !== 'undefined' && envUrl.startsWith('http')) {
-    return envUrl;
-  }
-  
-  // 2. Check if we're in browser and determine URL from hostname
+  // In browser, check for the public env var
   if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    
-    // Local development
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001';
+    // Try NEXT_PUBLIC_API_URL first (set at build time)
+    const publicApiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (publicApiUrl) {
+      return publicApiUrl;
     }
     
-    // Production - always use hardcoded URL
-    return PRODUCTION_API_URL;
+    // Fallback: If running on production domain, use production API
+    if (window.location.hostname === '24hrmvp.xyz' || 
+        window.location.hostname === 'www.24hrmvp.xyz') {
+      return 'https://api.24hrmvp.xyz';
+    }
+    
+    // Development fallback
+    return 'http://localhost:3001';
   }
   
-  // 3. Server-side or fallback - always production
-  return PRODUCTION_API_URL;
+  // Server-side fallback
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 }
 
 /**
- * Get the WebSocket URL with bulletproof fallback
+ * Get the WebSocket URL
+ * Uses NEXT_PUBLIC_WS_URL environment variable in production
+ * Falls back to localhost for development
  */
 export function getWsUrl(): string {
-  // 1. Try environment variable first
-  const envUrl = process.env.NEXT_PUBLIC_WS_URL;
-  if (envUrl && envUrl !== 'undefined' && (envUrl.startsWith('ws://') || envUrl.startsWith('wss://'))) {
-    return envUrl;
-  }
-  
-  // 2. Check if we're in browser and determine URL from hostname
+  // In browser, check for the public env var
   if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    
-    // Local development
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'ws://localhost:3001';
+    // Try NEXT_PUBLIC_WS_URL first (set at build time)
+    const publicWsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (publicWsUrl) {
+      return publicWsUrl;
     }
     
-    // Production
-    return PRODUCTION_WS_URL;
+    // Fallback: If running on production domain, use production WebSocket
+    if (window.location.hostname === '24hrmvp.xyz' || 
+        window.location.hostname === 'www.24hrmvp.xyz') {
+      return 'wss://api.24hrmvp.xyz';
+    }
+    
+    // Development fallback
+    return 'http://localhost:3001';
   }
   
-  // 3. Server-side or fallback
-  return PRODUCTION_WS_URL;
+  // Server-side fallback
+  return process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
 }
 
 /**
- * Get the app URL (frontend) with bulletproof fallback
+ * Check if we're in development mode
  */
-export function getAppUrl(): string {
-  // 1. Try environment variable first
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (envUrl && envUrl !== 'undefined' && envUrl.startsWith('http')) {
-    return envUrl;
-  }
-  
-  // 2. Check if we're in browser - use current origin
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    
-    // Local development
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return window.location.origin;
-    }
-    
-    // Production
-    return PRODUCTION_APP_URL;
-  }
-  
-  // 3. Server-side or fallback
-  return PRODUCTION_APP_URL;
+export function isDevelopment(): boolean {
+  return process.env.NODE_ENV === 'development';
 }
-
-// ============================================
-// COMPUTED CONSTANTS
-// These are computed at module load time
-// For client components, prefer using the functions directly
-// ============================================
-
-// Use functions to ensure values are never undefined
-export const API_URL = getApiUrl();
-export const WS_URL = getWsUrl();
-export const APP_URL = getAppUrl();
-
-// ============================================
-// DEBUG LOGGING (Development only)
-// ============================================
-if (typeof window !== 'undefined') {
-  // Log on first load to help debug issues
-  const debugInfo = {
-    API_URL: getApiUrl(),
-    WS_URL: getWsUrl(),
-    APP_URL: getAppUrl(),
-    env_API: process.env.NEXT_PUBLIC_API_URL || '(not set)',
-    hostname: window.location.hostname,
-  };
-  
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[Config] URLs:', debugInfo);
-  }
-  
-  // Warn if API_URL looks wrong
-  const apiUrl = getApiUrl();
-  if (!apiUrl || apiUrl === 'undefined' || !apiUrl.startsWith('http')) {
-    console.error('[Config] CRITICAL: Invalid API_URL detected:', apiUrl);
-  }
-}
-
-// ============================================
-// EXPORT HELPERS
-// ============================================
 
 /**
- * Build a full API URL from a path
- * @param path - API path (e.g., '/api/ideas')
- * @returns Full URL (e.g., 'https://api.24hrmvp.xyz/api/ideas')
+ * Check if we're in production mode
  */
-export function buildApiUrl(path: string): string {
-  const baseUrl = getApiUrl();
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${baseUrl}${normalizedPath}`;
+export function isProduction(): boolean {
+  return process.env.NODE_ENV === 'production';
 }
 
-export default {
-  getApiUrl,
-  getWsUrl,
-  getAppUrl,
-  buildApiUrl,
-  API_URL,
-  WS_URL,
-  APP_URL,
-};
+/**
+ * Get environment-specific configuration
+ */
+export const config = {
+  api: {
+    baseUrl: getApiUrl,
+    timeout: 30000, // 30 seconds
+    retryAttempts: 3,
+  },
+  ws: {
+    url: getWsUrl,
+    reconnectAttempts: 5,
+    reconnectDelay: 1000,
+    reconnectDelayMax: 30000,
+  },
+  features: {
+    chat: true,
+    forum: true,
+    livestream: false, // Not yet implemented
+    social: true,
+  },
+} as const;
+
+export default config;

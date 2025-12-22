@@ -1,26 +1,34 @@
-﻿'use client';
+'use client';
 
 /**
  * Authentication Button Component
  * 
- * @version 4.4.0 - ASCII-only comments
+ * @version 5.1.0 - Works with WalletProvider wrapping the app
+ * 
+ * This component requires WalletProvider to be in the component tree.
+ * It uses RainbowKit's ConnectButton for wallet connection.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAuth } from '@/providers/AuthProvider';
-import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, LogOut, User, LayoutGrid, Wallet, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AuthButton() {
-  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
-  const { address, isConnected } = useAccount();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Track client-side mounting
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -34,10 +42,18 @@ export default function AuthButton() {
     }
   }, [showDropdown]);
 
-  // AUTHENTICATED STATE
+  // Don't render anything until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="w-[140px] h-10 bg-[#1E1E1E]/50 rounded-lg animate-pulse" />
+    );
+  }
+
+  // AUTHENTICATED STATE (via our auth system)
   if (isAuthenticated && user) {
-    const truncatedAddress = user.walletAddress
-      ? `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}`
+    const displayAddress = user.walletAddress || user.custodyAddress;
+    const truncatedAddress = displayAddress
+      ? `${displayAddress.slice(0, 6)}...${displayAddress.slice(-4)}`
       : user.username;
 
     const profilePath = `/profile/${user.id}`;
@@ -56,7 +72,7 @@ export default function AuthButton() {
             {user.pfpUrl ? (
               <img
                 src={user.pfpUrl}
-                alt={user.username}
+                alt={user.username || 'User'}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
@@ -142,8 +158,8 @@ export default function AuthButton() {
     );
   }
 
-  // LOADING SIWE STATE
-  if (isConnected && address && isLoading) {
+  // LOADING STATE
+  if (isLoading) {
     return (
       <motion.button
         disabled
@@ -157,27 +173,7 @@ export default function AuthButton() {
     );
   }
 
-  // NEEDS SIWE SIGNATURE STATE
-  if (isConnected && address && !isAuthenticated && !isLoading) {
-    const truncatedAddr = `${address.slice(0, 6)}...${address.slice(-4)}`;
-
-    return (
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={login}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm
-          bg-[#1E1E1E] border border-yellow-500/50 text-yellow-400
-          hover:bg-yellow-500/10 transition-all"
-      >
-        <AlertCircle className="w-4 h-4" />
-        <span>{truncatedAddr}</span>
-        <span className="text-xs opacity-70">(Sign In)</span>
-      </motion.button>
-    );
-  }
-
-  // NOT CONNECTED STATE
+  // NOT CONNECTED / NOT AUTHENTICATED - Use RainbowKit ConnectButton
   return (
     <ConnectButton.Custom>
       {({
@@ -187,9 +183,9 @@ export default function AuthButton() {
         openChainModal,
         openConnectModal,
         authenticationStatus,
-        mounted,
+        mounted: rkMounted,
       }) => {
-        const ready = mounted && authenticationStatus !== 'loading';
+        const ready = rkMounted && authenticationStatus !== 'loading';
         const connected =
           ready &&
           account &&
@@ -235,7 +231,7 @@ export default function AuthButton() {
                 );
               }
 
-              if (chain.unsupported) {
+              if (chain?.unsupported) {
                 return (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -261,7 +257,7 @@ export default function AuthButton() {
                     hover:border-[#04D9FF]/50 transition-all"
                 >
                   <Wallet className="w-4 h-4" />
-                  {account.displayName}
+                  {account?.displayName}
                 </motion.button>
               );
             })()}

@@ -1,8 +1,15 @@
+// ============================================
+// 24HRMVP - MAIN SERVER ENTRY POINT (PRODUCTION READY)
+// File: backend/src/index.ts
+// 
+// UPDATED: Removed /api/chat (moved to /api/grid/chat)
+// ============================================
+
 import express, { Request, Response, NextFunction } from 'express';
 import { createServer } from 'http';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
-import cors from 'cors'; // Direct import for explicit config
+import cors from 'cors';
 
 // Load environment variables FIRST
 dotenv.config();
@@ -21,7 +28,7 @@ import { setupGracefulShutdown, registerCleanup } from './lib/shutdown';
 import { initWebSocket } from './services/websocket';
 
 // ============================================
-// INITIALIZE PRISMA - Exported for routes (no change to existing pattern)
+// INITIALIZE PRISMA - Exported for routes
 // ============================================
 export const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
@@ -32,7 +39,6 @@ export const prisma = new PrismaClient({
 // ============================================
 import {
   helmetMiddleware,
-  // corsMiddleware, // Replacing with explicit config below
   additionalSecurityHeaders,
   requestSizeLimits
 } from './middleware/security';
@@ -54,7 +60,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 // ============================================
 import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
-import walletAuthRoutes from './routes/wallet-auth';  // <-- ADDED: SIWE Wallet Authentication
+import walletAuthRoutes from './routes/wallet-auth';
 import ideasRoutes from './routes/ideas';
 import votesRoutes from './routes/votes';
 import votesEnhancedRoutes from './routes/votes-enhanced';
@@ -68,8 +74,9 @@ import webhookRoutes from './routes/webhook';
 // ============================================
 import gridRoutes from './routes/grid';
 import leaderboardRoutes from './routes/leaderboard';
-import chatRoutes from './routes/chat.routes';
 import livestreamRoutes from './routes/livestream.routes';
+
+// NOTE: Chat routes are now mounted under /api/grid/chat via gridRoutes
 
 // ============================================
 // CONFIGURATION
@@ -83,11 +90,9 @@ if (NODE_ENV === 'production') {
   const missing = required.filter(key => !process.env[key]);
   if (missing.length > 0) {
     logger.error({ missing }, 'Missing required environment variables');
-    // Continue anyway - services may provide defaults
   }
 }
 
-// Warn about optional but recommended vars
 if (!process.env.REFRESH_SECRET) {
   logger.warn('REFRESH_SECRET not set - using fallback secret');
 }
@@ -108,7 +113,7 @@ app.set('trust proxy', 1);
 // MIDDLEWARE STACK (ORDER MATTERS!)
 // ============================================
 
-// 1. Sentry request handler - must be first to capture all requests
+// 1. Sentry request handler - must be first
 app.use(sentryRequestHandler());
 
 // 2. HTTP request logging with Pino
@@ -118,7 +123,6 @@ app.use(createHttpLogger());
 app.use(helmetMiddleware);
 
 // EXPLICIT CORS CONFIGURATION
-// Ensures cookies/credentials are allowed from frontend
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
   'https://24hrmvp.xyz',
@@ -127,7 +131,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
       callback(null, true);
@@ -135,7 +138,7 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true, // REQUIRED for cookies
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Internal-Request'],
 }));
@@ -152,7 +155,7 @@ app.use(express.urlencoded({ extended: true, limit: requestSizeLimits.urlencoded
 // 6. Static file serving for uploads
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || '/tmp/uploads'));
 
-// 7. General rate limiting (applied to all routes except health)
+// 7. General rate limiting
 app.use(generalLimiter);
 
 // ============================================
@@ -167,18 +170,17 @@ app.use('/health', healthRoutes);
 // Auth routes with stricter rate limiting
 app.use('/api/auth', authLimiter, authRoutes);
 
-// SIWE Wallet Authentication Routes  <-- ADDED
-// Endpoints: GET /nonce, POST /verify/siwe, POST /link, POST /refresh, GET /wallets, DELETE /wallets/:id, GET /chains
+// SIWE Wallet Authentication Routes
 app.use('/api/auth/wallet', authLimiter, walletAuthRoutes);
 
-// Ideas routes with submission rate limiting
-app.use('/api/ideas', ideasRoutes); // Auth handled in route, ideaLimiter on POST
+// Ideas routes
+app.use('/api/ideas', ideasRoutes);
 
-// Voting routes with vote-specific rate limiting
+// Voting routes
 app.use('/api/votes', votesRoutes);
 app.use('/api/votes', votesEnhancedRoutes);
 
-// Vote purchase routes with payment rate limiting
+// Vote purchase routes
 app.use('/api/vote-purchase', paymentLimiter, votePurchaseRoutes);
 
 // Voting cycles
@@ -193,9 +195,14 @@ app.use('/api/webhook', webhookRoutes);
 // ============================================
 // ROUTES - THE GRID Phase 1-4
 // ============================================
+
+// Grid routes (includes /forum, /social, /moderation, /chat)
 app.use('/api/grid', gridRoutes);
+
+// Leaderboard
 app.use('/api/leaderboard', leaderboardRoutes);
-app.use('/api/chat', chatLimiter, chatRoutes);
+
+// Livestreaming
 app.use('/api/live', livestreamRoutes);
 
 // ============================================
@@ -221,18 +228,19 @@ const server = createServer(app);
 const io = initWebSocket(server);
 logger.info('WebSocket server initialized');
 
-// Only start server if file is run directly (not imported for tests)
+// Only start server if file is run directly
 if (require.main === module) {
   server.listen(PORT, () => {
     logger.info(`
     🚀 Server ready at http://localhost:${PORT}
-    ⭐️ Environment: ${NODE_ENV}
+    ⭐ Environment: ${NODE_ENV}
     📌 WebSocket: Enabled
     🔐 SIWE Auth: Enabled
+    💬 Chat: /api/grid/chat
+    📋 Forum: /api/grid/forum
     `);
   });
 
-  // Handle server errors
   server.on('error', (error: NodeJS.ErrnoException) => {
     if (error.syscall !== 'listen') {
       throw error;

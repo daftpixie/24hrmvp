@@ -1,7 +1,13 @@
-﻿import '@/lib/wallet-error-handler';
+import '@/lib/wallet-error-handler';
 import type { Metadata, Viewport } from 'next';
 import { Orbitron, Space_Grotesk, DM_Sans, Space_Mono } from 'next/font/google';
 import './globals.css';
+
+// ============================================
+// PROVIDER IMPORTS
+// ============================================
+// These are client components that handle their own SSR logic
+import { WalletProvider } from '@/providers/WalletProvider';
 import { AuthProvider } from '@/providers/AuthProvider';
 
 // ============================================
@@ -129,9 +135,18 @@ export default function RootLayout({
         className={`${orbitron.variable} ${spaceGrotesk.variable} ${dmSans.variable} ${spaceMono.variable} antialiased bg-[#0B192A] text-[#FAFAFA]`}
         suppressHydrationWarning
       >
-        <AuthProvider>{children}</AuthProvider>
+        {/* 
+          Provider Order (outermost to innermost):
+          1. WalletProvider - Sets up WagmiProvider + RainbowKitProvider
+          2. AuthProvider - Handles authentication state
+          3. children - The actual page content
+        */}
+        <WalletProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </WalletProvider>
       </body>
     </html>
   );
 }
-

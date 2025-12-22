@@ -1,144 +1,277 @@
 // ============================================
-// 24HRMVP - FRONTEND GRID TYPES
+// 24HRMVP - GRID TYPES (COMPREHENSIVE)
 // File: frontend/lib/types/grid.ts
-// Client-side types matching backend API
+// FIXED: SocialPost now has all required properties
+// FIXED: Removed conflicting re-export from api/grid
 // ============================================
 
 // ============================================
-// FORUM TYPES
+// PAGINATION
+// ============================================
+
+export interface PaginationInfo {
+  page: number;
+  pages: number;
+  total: number;
+  limit?: number;
+  hasMore?: boolean;
+}
+
+// ============================================
+// API RESPONSE BASE
+// ============================================
+
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  pagination?: PaginationInfo;
+}
+
+// ============================================
+// STREAM STATUS (for livestreaming)
+// ============================================
+
+export type StreamStatus = 
+  | 'DRAFT'
+  | 'SCHEDULED'
+  | 'STARTING'
+  | 'LIVE'
+  | 'PAUSED'
+  | 'ENDED'
+  | 'CANCELLED';
+
+export const StreamStatusValues = {
+  DRAFT: 'DRAFT',
+  SCHEDULED: 'SCHEDULED',
+  STARTING: 'STARTING',
+  LIVE: 'LIVE',
+  PAUSED: 'PAUSED',
+  ENDED: 'ENDED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+// ============================================
+// SOCIAL PLATFORM TYPE
+// ============================================
+
+export type SocialPlatform = 'FARCASTER' | 'TWITTER' | 'INSTAGRAM' | 'TIKTOK';
+
+// ============================================
+// SORT AND TIMEFRAME TYPES
+// ============================================
+
+export type SortType = 'hot' | 'new' | 'top' | 'controversial';
+export type TimeframeType = 'day' | 'week' | 'month' | 'year' | 'all';
+
+// ============================================
+// POST TYPES
+// ============================================
+
+export type PostType = 
+  | 'DISCUSSION' 
+  | 'QUESTION' 
+  | 'ANNOUNCEMENT' 
+  | 'SHOWCASE' 
+  | 'TUTORIAL' 
+  | 'POLL' 
+  | 'FEEDBACK';
+
+// ============================================
+// CREATE/UPDATE POST DATA
+// ============================================
+
+export interface CreatePostData {
+  title?: string;
+  content: string;
+  type?: PostType;
+  tags?: string[];
+  parentId?: string;
+  ideaId?: string;
+}
+
+export interface UpdatePostData {
+  title?: string;
+  content?: string;
+  type?: PostType;
+  tags?: string[];
+  isPinned?: boolean;
+  isLocked?: boolean;
+}
+
+// ============================================
+// FORUM POST
 // ============================================
 
 export interface ForumPost {
   id: string;
   slug: string;
-  title: string | null;
+  title: string;
   content: string;
   type: string;
   author: {
     id: string;
-    fid: number;
     username: string;
     displayName: string | null;
     pfpUrl: string | null;
   };
-  score: number;
   upvotes: number;
   downvotes: number;
+  score: number;
   replyCount: number;
   viewCount: number;
-  wilsonScore: number;
-  hotScore: number;
-  tags: string[];
   isPinned: boolean;
   isLocked: boolean;
-  userVote?: number | null;
   isBookmarked?: boolean;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
+  userVote?: number;
   _count?: {
-    replies: number;
-    votes: number;
-    bookmarks: number;
+    replies?: number;
   };
 }
+
+// ============================================
+// FORUM COMMENT
+// ============================================
 
 export interface ForumComment {
   id: string;
   content: string;
   author: {
     id: string;
-    fid: number;
     username: string;
     displayName: string | null;
     pfpUrl: string | null;
   };
-  score: number;
-  upvotes: number;
-  downvotes: number;
-  replyCount: number;
-  userVote?: number | null;
   createdAt: string;
   updatedAt: string;
+  upvotes: number;
+  downvotes: number;
+  score: number;
+  parentId: string | null;
+  replyCount?: number;
+  replies?: ForumComment[];
+  userVote?: number;
 }
 
-export interface ForumFeedParams {
-  sort?: SortType;
-  type?: string;
-  timeframe?: TimeframeType;
-  page?: number;
-  limit?: number;
-}
+// ============================================
+// FORUM FEED RESPONSE
+// ============================================
 
 export interface ForumFeedResponse {
   success: boolean;
   posts: ForumPost[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-    hasMore: boolean;
-  };
+  pagination?: PaginationInfo;
 }
+
+// ============================================
+// FORUM THREAD RESPONSE
+// ============================================
 
 export interface ForumThreadResponse {
   success: boolean;
   post: ForumPost;
-  replies: ForumPost[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    hasMore: boolean;
-  };
+  comments: ForumComment[];
+  pagination?: PaginationInfo;
 }
 
 // ============================================
-// SOCIAL TYPES
+// SOCIAL POST (COMPREHENSIVE)
 // ============================================
-
-export type SocialPlatform = 'FARCASTER' | 'TWITTER' | 'INSTAGRAM' | 'TIKTOK';
 
 export interface SocialPost {
   id: string;
   platform: SocialPlatform;
   externalId: string;
-  author: {
-    fid: number | null;
-    username: string;
-    displayName: string | null;
-    avatar: string | null;
-  };
+  // Author info
+  authorFid?: number;
+  authorUsername?: string;
+  authorDisplayName?: string;
+  authorAvatar?: string;
+  // Content
   content: string;
-  mediaUrls: string[];
-  hashtags: string[];
-  mentions: string[];
-  engagement: {
-    likes: number;
-    reposts: number;
-    replies: number;
-    impressions: number;
-  };
-  channelId: string | null;
-  externalUrl: string | null;
+  timestamp: string;
+  // URLs
+  url?: string;
+  externalUrl?: string;
+  // Media
+  mediaUrls?: string[];
+  // Channel/hashtags
+  channelId?: string;
+  channelName?: string;
+  hashtags?: string[];
+  // Engagement metrics
+  likes?: number;
+  reposts?: number;
+  replies?: number;
+  // Flags
   isFeatured: boolean;
-  publishedAt: string;
+  createdAt: string;
 }
+
+// ============================================
+// SOCIAL FEED RESPONSE
+// ============================================
 
 export interface SocialFeedResponse {
   success: boolean;
   posts: SocialPost[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    hasMore: boolean;
+  pagination?: PaginationInfo;
+}
+
+// ============================================
+// CHAT TYPES
+// ============================================
+
+export interface ChatRoom {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  type: string;
+  memberCount: number;
+  messageCount: number;
+  createdAt: string;
+  iconUrl?: string;
+  lastMessageAt?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  content: string;
+  authorId: string;
+  author: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    pfpUrl: string | null;
+  };
+  createdAt: string;
+  isEdited?: boolean;
+  isPinned?: boolean;
+  replyTo?: {
+    id: string;
+    content: string;
+    author: { username: string };
   };
 }
 
 // ============================================
 // LEADERBOARD TYPES
 // ============================================
+
+export type LeaderboardMetric = 'points' | 'submissions' | 'votes' | 'forum_score' | 'achievements';
+export type LeaderboardTimeframe = 'day' | 'week' | 'month' | 'year' | 'all';
+
+export interface LeaderboardParams {
+  metric?: LeaderboardMetric;
+  timeframe?: LeaderboardTimeframe;
+  limit?: number;
+  offset?: number;
+}
 
 export interface LeaderboardEntry {
   rank: number;
@@ -149,88 +282,44 @@ export interface LeaderboardEntry {
     displayName: string | null;
     pfpUrl: string | null;
   };
-  score: number;
+  value: number;
+  score: number; // Alias for value
   metric: string;
+  change?: number;
 }
 
 export interface LeaderboardResponse {
   success: boolean;
+  entries: LeaderboardEntry[];
   metric: string;
   timeframe: string;
-  entries: LeaderboardEntry[];
-  userRank?: LeaderboardEntry | null;
+  total: number;
+  updatedAt: string;
 }
 
 // ============================================
-// MUTATION TYPES
+// TRENDING CHANNEL
 // ============================================
 
-export interface CreatePostData {
-  title?: string;
-  content: string;
-  type?: string;
-  parentId?: string;
-  ideaId?: string;
-  tags?: string[];
-}
-
-export interface UpdatePostData {
-  title?: string;
-  content?: string;
-  tags?: string[];
-  isPinned?: boolean;
-  isLocked?: boolean;
-}
-
-// ============================================
-// SORT & FILTER TYPES
-// ============================================
-
-export type SortType = 'hot' | 'new' | 'top' | 'controversial';
-export type TimeframeType = 'day' | 'week' | 'month' | 'year' | 'all';
-export type PostType = 'DISCUSSION' | 'QUESTION' | 'SHOWCASE' | 'FEEDBACK' | 'ANNOUNCEMENT';
-
-// ============================================
-// LIVESTREAM TYPES
-// ============================================
-
-export type StreamStatus = 
-  | 'DRAFT' 
-  | 'SCHEDULED' 
-  | 'STARTING' 
-  | 'LIVE' 
-  | 'ENDING' 
-  | 'ENDED' 
-  | 'CANCELLED' 
-  | 'ERROR';
-
-export interface Livestream {
+export interface TrendingChannel {
   id: string;
-  title: string;
-  description: string | null;
-  status: StreamStatus;
-  playbackUrl: string | null;
-  thumbnailUrl: string | null;
-  hostId: string;
-  host: {
-    id: string;
-    username: string;
-    displayName: string | null;
-    pfpUrl: string | null;
-  };
-  viewerCount: number;
-  peakViewers: number;
-  scheduledAt: string | null;
-  startedAt: string | null;
-  endedAt: string | null;
-  tags: string[];
-  category: string | null;
-  chatRoomId: string | null;
-  createdAt: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  image_url?: string;
+  followerCount?: number;
+  follower_count?: number;
+  url?: string;
+  postCount?: number;
+}
+
+export interface TrendingChannelsResponse {
+  success: boolean;
+  channels: TrendingChannel[];
 }
 
 // ============================================
-// CHANNEL TYPES
+// FARCASTER CHANNEL
 // ============================================
 
 export interface FarcasterChannel {
@@ -238,6 +327,127 @@ export interface FarcasterChannel {
   name: string;
   description?: string;
   imageUrl?: string;
-  followerCount: number;
+  followerCount?: number;
   url?: string;
+}
+
+// ============================================
+// GRID STATS
+// ============================================
+
+export interface GridStats {
+  totalMembers: number;
+  activeNow: number;
+  totalMessages: number;
+  todayActivity: number;
+}
+
+// ============================================
+// USER PROFILE
+// ============================================
+
+export interface UserProfile {
+  id: string;
+  fid: number;
+  username: string;
+  displayName: string | null;
+  pfpUrl: string | null;
+  bio?: string;
+  custodyAddress: string | null;
+  walletAddress: string | null;
+  membershipTier: string;
+  points: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================
+// ACHIEVEMENT TYPES
+// ============================================
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  iconUrl?: string;
+  type: string;
+  requirement: number;
+  points: number;
+}
+
+export interface UserAchievement {
+  id: string;
+  achievement: Achievement;
+  earnedAt: string;
+  progress: number;
+}
+
+// ============================================
+// NOTIFICATION
+// ============================================
+
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  data?: Record<string, unknown>;
+}
+
+// ============================================
+// LIVESTREAM TYPES
+// ============================================
+
+export interface Livestream {
+  id: string;
+  title: string;
+  description?: string;
+  status: StreamStatus;
+  streamKey?: string;
+  playbackUrl?: string;
+  thumbnailUrl?: string;
+  hostId: string;
+  host?: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    pfpUrl: string | null;
+  };
+  viewerCount: number;
+  startedAt?: string;
+  endedAt?: string;
+  scheduledFor?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LivestreamViewer {
+  id: string;
+  streamId: string;
+  userId?: string;
+  user?: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    pfpUrl: string | null;
+  };
+  joinedAt: string;
+  leftAt?: string;
+}
+
+// ============================================
+// FORUM FEED PARAMS
+// ============================================
+
+export interface ForumFeedParams {
+  sort?: SortType;
+  type?: string;
+  filter?: 'all' | 'questions' | 'discussions' | 'announcements' | 'showcases';
+  timeframe?: TimeframeType;
+  cursor?: string;
+  page?: number;
+  limit?: number;
+  tags?: string[];
 }

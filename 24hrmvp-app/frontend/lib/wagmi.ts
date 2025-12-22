@@ -1,11 +1,20 @@
-﻿/**
+/**
  * Wagmi Configuration for 24HRMVP
- * @version 4.5.0
+ * 
+ * @version 5.1.0 - Updated for RainbowKit 2.x + Wagmi 2.x
+ * 
+ * This file exports the wagmi config used throughout the app.
+ * The config is created using RainbowKit's getDefaultConfig for
+ * seamless integration with the RainbowKit UI.
  */
 
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { mainnet, base, polygon, arbitrum, optimism } from 'wagmi/chains';
-import { http, type Config } from 'wagmi';
+import { http } from 'wagmi';
+
+// ============================================
+// CONFIGURATION CONSTANTS
+// ============================================
 
 export const SUPPORTED_CHAINS = [
   mainnet,
@@ -15,6 +24,17 @@ export const SUPPORTED_CHAINS = [
   optimism,
 ] as const;
 
+export const WALLETCONNECT_PROJECT_ID = 
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '5ac1003d6254111216201e5042cb4675';
+
+const APP_NAME = '24HRMVP';
+const APP_DESCRIPTION = 'Community-driven 24-hour MVP development platform';
+const APP_ICON = 'https://24hrmvp.xyz/icon.png';
+
+// ============================================
+// TRANSPORT CONFIGURATION
+// ============================================
+
 const transports = {
   [mainnet.id]: http(),
   [base.id]: http(),
@@ -23,10 +43,9 @@ const transports = {
   [optimism.id]: http(),
 };
 
-const APP_NAME = '24HRMVP';
-const APP_DESCRIPTION = 'Community-driven 24-hour MVP development platform';
-const APP_ICON = 'https://24hrmvp.xyz/icon.png';
-const WALLETCONNECT_PROJECT_ID = '5ac1003d6254111216201e5042cb4675';
+// ============================================
+// APP URL HELPER
+// ============================================
 
 function getAppUrl(): string {
   if (typeof window !== 'undefined') {
@@ -35,34 +54,21 @@ function getAppUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || 'https://24hrmvp.xyz';
 }
 
-declare global {
-  var __wagmiConfig: Config | undefined;
-}
+// ============================================
+// WAGMI CONFIG (using RainbowKit's getDefaultConfig)
+// ============================================
 
-function getOrCreateConfig(): Config {
-  if (globalThis.__wagmiConfig) {
-    return globalThis.__wagmiConfig;
-  }
+// Note: getDefaultConfig creates a properly configured wagmi config
+// with all necessary connectors for RainbowKit (WalletConnect, Coinbase, etc.)
+export const config = getDefaultConfig({
+  appName: APP_NAME,
+  appDescription: APP_DESCRIPTION,
+  appUrl: getAppUrl(),
+  appIcon: APP_ICON,
+  projectId: WALLETCONNECT_PROJECT_ID,
+  chains: SUPPORTED_CHAINS,
+  transports,
+  ssr: true, // Enable SSR support
+});
 
-  const appUrl = getAppUrl();
-
-  globalThis.__wagmiConfig = getDefaultConfig({
-    appName: APP_NAME,
-    appDescription: APP_DESCRIPTION,
-    appUrl: appUrl,
-    appIcon: APP_ICON,
-    projectId: WALLETCONNECT_PROJECT_ID,
-    chains: SUPPORTED_CHAINS,
-    transports,
-    ssr: true,
-  });
-
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-    console.log('[wagmi] Config v4.5.0', { appUrl });
-  }
-
-  return globalThis.__wagmiConfig;
-}
-
-export const config = getOrCreateConfig();
 export default config;

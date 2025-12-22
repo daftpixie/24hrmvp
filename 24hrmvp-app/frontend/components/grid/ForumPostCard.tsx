@@ -4,15 +4,19 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronUp, ChevronDown, MessageCircle, Bookmark, Clock, Eye } from 'lucide-react';
 import { usePostMutations } from '@/hooks/useGrid';
-import type { ForumPost, PostType } from '@/lib/types/grid';
+import type { ForumPost } from '@/lib/api/grid';
 
 // Post type configuration with icons and colors
+type PostType = 'DISCUSSION' | 'QUESTION' | 'SHOWCASE' | 'FEEDBACK' | 'ANNOUNCEMENT' | 'TUTORIAL' | 'POLL';
+
 const postTypeConfig: Record<PostType, { color: string; icon: string; label: string }> = {
   DISCUSSION: { color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: '💬', label: 'Discussion' },
   QUESTION: { color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: '❓', label: 'Question' },
   SHOWCASE: { color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', icon: '🚀', label: 'Showcase' },
   FEEDBACK: { color: 'bg-orange-500/20 text-orange-400 border-orange-500/30', icon: '📝', label: 'Feedback' },
   ANNOUNCEMENT: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: '📢', label: 'Announcement' },
+  TUTORIAL: { color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30', icon: '📚', label: 'Tutorial' },
+  POLL: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: '📊', label: 'Poll' },
 };
 
 interface ForumPostCardProps {
@@ -57,9 +61,7 @@ export const ForumPostCard: React.FC<ForumPostCardProps> = ({
       setUserVote(newVote === 0 ? null : newVote);
       setCurrentScore(prev => prev + scoreDiff);
       
-      if (newVote === 0) {
-        // Remove vote - would need unvote function
-      } else {
+      if (newVote !== 0) {
         await voteOnPost(post.id, value);
       }
     } catch (err) {
@@ -70,11 +72,12 @@ export const ForumPostCard: React.FC<ForumPostCardProps> = ({
     }
   };
 
+  // Fixed: toggleBookmark only takes postId (toggle behavior)
   const handleBookmark = async () => {
     try {
       const newBookmarkState = !isBookmarked;
       setIsBookmarked(newBookmarkState);
-      await toggleBookmark(post.id, newBookmarkState);
+      await toggleBookmark(post.id);
     } catch (err) {
       setIsBookmarked(isBookmarked);
       console.error('Bookmark failed:', err);

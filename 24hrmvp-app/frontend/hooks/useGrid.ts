@@ -1,23 +1,186 @@
 // ============================================
 // 24HRMVP - USE GRID HOOK
 // File: frontend/hooks/useGrid.ts
-// Manages Grid state and data fetching
+// FIXED: SocialPost type now matches lib/types/grid
+// FIXED: All types imported from types/grid
 // ============================================
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getLeaderboard, getForumFeed, getTrendingChannels } from '@/lib/api/grid';
 import { getApiUrl } from '@/lib/config';
-import type { LeaderboardParams } from '@/lib/api/grid';
-import type { LeaderboardEntry, ForumPost, ForumComment, FarcasterChannel } from '@/lib/types/grid';
+import type {
+  LeaderboardParams,
+  LeaderboardEntry,
+  LeaderboardResponse,
+  ForumPost,
+  ForumComment,
+  SocialPost,
+  SocialPlatform,
+  TrendingChannel,
+  GridStats,
+  FarcasterChannel,
+} from '@/lib/types/grid';
 
-export interface GridStats {
-  totalMembers: number;
-  activeNow: number;
-  totalMessages: number;
-  todayActivity: number;
+// Re-export types for backward compatibility
+export type { 
+  LeaderboardParams, 
+  LeaderboardEntry, 
+  ForumPost, 
+  ForumComment,
+  SocialPost,
+  SocialPlatform,
+  FarcasterChannel,
+};
+
+// ============================================
+// API HELPER FUNCTIONS
+// ============================================
+
+function getAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (typeof window !== 'undefined') {
+    const token = sessionStorage.getItem('jwt_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+  
+  return headers;
 }
+
+// ============================================
+// LEADERBOARD API
+// ============================================
+
+async function getLeaderboard(params: LeaderboardParams = {}): Promise<LeaderboardResponse> {
+  const apiUrl = getApiUrl();
+  const searchParams = new URLSearchParams();
+  if (params.metric) searchParams.set('metric', params.metric);
+  if (params.timeframe) searchParams.set('timeframe', params.timeframe);
+  if (params.limit) searchParams.set('limit', params.limit.toString());
+  if (params.offset) searchParams.set('offset', params.offset.toString());
+  
+  const query = searchParams.toString();
+  const response = await fetch(`${apiUrl}/api/grid/leaderboard${query ? `?${query}` : ''}`, {
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch leaderboard');
+  }
+  
+  const data = await response.json();
+  
+  // Normalize entries to have both value and score
+  if (data.entries) {
+    data.entries = data.entries.map((entry: LeaderboardEntry) => ({
+      ...entry,
+      score: entry.score ?? entry.value,
+      value: entry.value ?? entry.score,
+    }));
+  }
+  
+  return data;
+}
+
+// ============================================
+// FORUM API
+// ============================================
+
+interface ForumFeedParams {
+  sort?: 'hot' | 'new' | 'top';
+  type?: string;
+  timeframe?: 'day' | 'week' | 'month' | 'year' | 'all';
+  page?: number;
+  limit?: number;
+  tags?: string[];
+}
+
+interface ForumFeedResponse {
+  success: boolean;
+  posts: ForumPost[];
+  pagination?: {
+    page: number;
+    pages: number;
+    total: number;
+  };
+}
+
+async function getForumFeed(params: ForumFeedParams = {}): Promise<ForumFeedResponse> {
+  const apiUrl = getApiUrl();
+  const searchParams = new URLSearchParams();
+  if (params.sort) searchParams.set('sort', params.sort);
+  if (params.type) searchParams.set('type', params.type);
+  if (params.timeframe) searchParams.set('timeframe', params.timeframe);
+  if (params.page) searchParams.set('page', params.page.toString());
+  if (params.limit) searchParams.set('limit', params.limit.toString());
+  if (params.tags && params.tags.length > 0) {
+    searchParams.set('tags', params.tags.join(','));
+  }
+  
+  const query = searchParams.toString();
+  const response = await fetch(`${apiUrl}/api/grid/forum${query ? `?${query}` : ''}`, {
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch forum feed');
+  }
+  
+  return response.json();
+}
+
+// ============================================
+// TRENDING CHANNELS API
+// ============================================
+
+interface TrendingChannelsResponse {
+  success: boolean;
+  channels: TrendingChannel[];
+}
+
+async function getTrendingChannels(limit: number = 20): Promise<TrendingChannelsResponse> {
+  const apiUrl = getApiUrl();
+  const response = await fetch(`${apiUrl}/api/grid/social/channels/trending?limit=${limit}`, {
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch trending channels');
+  }
+  
+  return response.json();
+}
+
+// ============================================
+// BOOKMARK API
+// ============================================
+
+async function bookmarkForumPost(postId: string): Promise<{ success: boolean; isBookmarked: boolean }> {
+  const apiUrl = getApiUrl();
+  const response = await fetch(`${apiUrl}/api/grid/forum/post/${postId}/bookmark`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to toggle bookmark');
+  }
+  
+  return response.json();
+}
+
+// ============================================
+// MAIN GRID HOOK
+// ============================================
 
 export function useGrid() {
   const [stats, setStats] = useState<GridStats | null>(null);
@@ -82,7 +245,10 @@ export function useGrid() {
       });
       
       if (response.success && response.posts) {
-        setRecentPosts(response.posts);
+        const posts = Array.isArray(response.posts) 
+          ? response.posts.flat() 
+          : [];
+        setRecentPosts(posts);
       } else {
         setRecentPosts([]);
       }
@@ -130,7 +296,7 @@ export function useGrid() {
 // ============================================
 
 export interface ForumFeedFilters {
-  sort?: 'hot' | 'new' | 'top' | 'controversial';
+  sort?: 'hot' | 'new' | 'top';
   type?: string;
   timeframe?: 'day' | 'week' | 'month' | 'year' | 'all';
   page?: number;
@@ -160,9 +326,18 @@ export function useForumFeed(initialFilters: ForumFeedFilters = {}) {
       });
       
       if (response.success && response.posts) {
-        setPosts(response.posts);
-        setTotalPages(response.pagination?.pages || 1);
-        setCurrentPage(response.pagination?.page || 1);
+        const postsArray = Array.isArray(response.posts) 
+          ? response.posts.flat() 
+          : [];
+        setPosts(postsArray);
+        
+        if (response.pagination) {
+          setTotalPages(response.pagination.pages || 1);
+          setCurrentPage(response.pagination.page || 1);
+        } else {
+          setTotalPages(1);
+          setCurrentPage(1);
+        }
       } else {
         setPosts([]);
       }
@@ -226,7 +401,7 @@ export function usePostMutations() {
       const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/api/grid/forum`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(data)
       });
@@ -254,7 +429,7 @@ export function usePostMutations() {
       const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/api/grid/forum/post/${postId}/vote`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ value })
       });
@@ -299,27 +474,12 @@ export function usePostMutations() {
     }
   }, []);
 
-  const toggleBookmark = useCallback(async (postId: string, isBookmarked: boolean) => {
+  const toggleBookmark = useCallback(async (postId: string) => {
     setBookmarking(true);
     setError(null);
     try {
-      const apiUrl = getApiUrl();
-      const method = isBookmarked ? 'DELETE' : 'POST';
-      const res = await fetch(`${apiUrl}/api/grid/forum/post/${postId}/bookmark`, {
-        method,
-        credentials: 'include',
-        ...(method === 'POST' && {
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        })
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to toggle bookmark');
-      }
-      
-      return await res.json();
+      const result = await bookmarkForumPost(postId);
+      return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to toggle bookmark';
       setError(errorMessage);
@@ -449,24 +609,8 @@ export function useForumThread(slug: string) {
 // SOCIAL FEED HOOKS
 // ============================================
 
-export interface SocialPost {
-  id: string;
-  platform: 'FARCASTER' | 'TWITTER' | 'INSTAGRAM' | 'TIKTOK';
-  externalId: string;
-  authorFid?: number;
-  authorUsername?: string;
-  content: string;
-  timestamp: string;
-  url?: string;
-  mediaUrls?: string[];
-  channelId?: string;
-  hashtags?: string[];
-  isFeatured: boolean;
-  createdAt: string;
-}
-
 export interface SocialFeedOptions {
-  platform?: 'FARCASTER' | 'TWITTER' | 'INSTAGRAM' | 'TIKTOK' | 'all';
+  platform?: SocialPlatform | 'all';
   channelId?: string;
   limit?: number;
 }
@@ -574,8 +718,7 @@ export function useFarcasterChannels(limit: number = 20) {
       const response = await getTrendingChannels(limit);
       
       if (response.success && response.channels) {
-        // Transform to FarcasterChannel interface
-        const transformedChannels: FarcasterChannel[] = response.channels.map((ch: any) => ({
+        const transformedChannels: FarcasterChannel[] = response.channels.map((ch) => ({
           id: ch.id,
           name: ch.name,
           description: ch.description,

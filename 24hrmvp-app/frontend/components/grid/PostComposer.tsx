@@ -2,13 +2,17 @@
 // THE GRID - POST COMPOSER COMPONENT
 // File: frontend/components/grid/PostComposer.tsx
 // Rich text editor for creating forum posts
+// FIXED: Import CreatePostData from lib/api/grid instead of lib/types/grid
 // ============================================
 
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PostType, CreatePostData } from '../../lib/types/grid';
+import type { CreatePostData } from '@/lib/api/grid';
+
+// Post types definition
+type PostType = 'DISCUSSION' | 'QUESTION' | 'SHOWCASE' | 'FEEDBACK' | 'ANNOUNCEMENT' | 'TUTORIAL' | 'POLL';
 
 const postTypes: { value: PostType; label: string; icon: string; description: string }[] = [
   { value: 'DISCUSSION', label: 'Discussion', icon: '💬', description: 'Start a conversation' },
@@ -68,7 +72,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
 
     try {
       const data: CreatePostData = {
-        title: isReply ? 'Reply' : title.trim(),
+        title: isReply ? undefined : title.trim(),
         content: content.trim(),
         type: isReply ? undefined : type,
         parentId,
