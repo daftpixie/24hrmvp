@@ -6,9 +6,13 @@ import './globals.css';
 // ============================================
 // PROVIDER IMPORTS
 // ============================================
-// These are client components that handle their own SSR logic
 import { WalletProvider } from '@/providers/WalletProvider';
 import { AuthProvider } from '@/providers/AuthProvider';
+
+// ============================================
+// ANALYTICS - Self-hosted Plausible
+// ============================================
+import { PlausibleMultiDomain } from '@/components/analytics/PlausibleProvider';
 
 // ============================================
 // FONT CONFIGURATION
@@ -130,17 +134,17 @@ export default function RootLayout({
         <link rel="preconnect" href="https://verify.walletconnect.com" />
         <link rel="preconnect" href="https://verify.walletconnect.org" />
         <link rel="preconnect" href="https://explorer-api.walletconnect.com" />
+        
+        {/* Preconnect to analytics */}
+        <link rel="preconnect" href="https://analytics.24hrmvp.xyz" />
+        
+        {/* Plausible Analytics - tracks to 24hrmvp.xyz + all.24hrmvp.xyz */}
+        <PlausibleMultiDomain domains={['24hrmvp.xyz', 'all.24hrmvp.xyz']} />
       </head>
       <body
         className={`${orbitron.variable} ${spaceGrotesk.variable} ${dmSans.variable} ${spaceMono.variable} antialiased bg-[#0B192A] text-[#FAFAFA]`}
         suppressHydrationWarning
       >
-        {/* 
-          Provider Order (outermost to innermost):
-          1. WalletProvider - Sets up WagmiProvider + RainbowKitProvider
-          2. AuthProvider - Handles authentication state
-          3. children - The actual page content
-        */}
         <WalletProvider>
           <AuthProvider>
             {children}
